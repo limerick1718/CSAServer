@@ -12,6 +12,7 @@ import log_config
 import const, util
 from method_finder import MethodFinder
 
+# uvicorn main:app --host 0.0.0.0 --port 1992 % --reload
 app = FastAPI()
 
 logger = logging.getLogger("main")

@@ -1,6 +1,11 @@
 import logging
 import time
 
+import os
+
+if not os.path.exists("log"):
+    os.makedirs("log")
+
 # time in yyyy-mm-dd-hh-mm-ss
 current_time = time.strftime("%Y-%m-%d-%H-%M-%S")
 # set up logging to file - see previous section for more details
