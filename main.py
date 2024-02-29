@@ -89,7 +89,7 @@ async def get_similarity(package_name: str, version_code: int):
     embedding_path = const.get_embedding_file(apk_name)
     similarity_path = const.get_similarity_file(apk_name)
     if not os.path.exists(embedding_path) or not os.path.exists(similarity_path):
-        subprocess.Popen(["python", "core/similarity_cal.py", apk_name])
+        subprocess.Popen(["python", "similarity_cal.py", apk_name])
     return {"message": "Processing"}
 #  curl http://localhost:8000/record?package_name=org.woheller69.spritpreise&version_code=24
 

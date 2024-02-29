@@ -8,11 +8,9 @@ from node2vec import Node2Vec
 
 from sklearn.metrics.pairwise import cosine_similarity
 
-from core import const
+from core import const, util
 
 import logging
-
-import util
 
 logger = logging.getLogger("similarity_cal")
 
