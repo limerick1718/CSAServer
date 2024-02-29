@@ -1,10 +1,7 @@
-import time
-
 import pandas as pd
 
-import const
-import util
-from cg import CG
+from core import const, util
+from core.cg import CG
 
 import logging
 
@@ -119,9 +116,9 @@ class MethodFinder:
         return removed_methods
 
     def get_removed_methods(self):
-        for method in self.to_remove_methods:
-            if util.is_skipped_package(method):
-                self.to_remove_methods.remove(method)
+        # for method in self.to_remove_methods:
+        #     if util.is_skipped_package(method):
+        #         self.to_remove_methods.remove(method)
         return set(self.to_remove_methods)
 
 

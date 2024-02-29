@@ -1,4 +1,4 @@
-import const
+from core import const
 import logging
 
 logger = logging.getLogger("CG")

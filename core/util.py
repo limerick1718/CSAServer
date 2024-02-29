@@ -1,12 +1,9 @@
 # run shell command: sh apk_package.sh {apk_name} and get the output in string
-import asyncio
 import os
 import subprocess
 
-import const
+from core import const
 import logging
-
-import similarity_cal
 
 logger = logging.getLogger("util")
 permission_mappings = {}

@@ -8,7 +8,7 @@ from node2vec import Node2Vec
 
 from sklearn.metrics.pairwise import cosine_similarity
 
-import const
+from core import const
 
 import logging
 
