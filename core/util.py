@@ -108,3 +108,31 @@ def is_skipped_package(method_name: str):
         if class_name.startswith(temp_package_prefix):
             return True
     return False
+
+def parse_manifest(apk_name: str):
+    manifest_path = const.get_manifest_file(apk_name)
+    permissions = []
+    activities = []
+    permission_flag = False
+    activity_flag = False
+    with open(manifest_path, "r") as f:
+        lines = f.readlines()
+        for line in lines:
+            line = line.strip()
+            if line.startswith("uses-permission"):
+                permission_flag = True
+                continue
+            if line.startswith("activity"):
+                activity_flag = True
+                continue
+            if permission_flag and line.startswith("- name: "):
+                permission_flag = False
+                permission = line.replace("- name: ", "").strip()
+                permissions.append(permission)
+                continue
+            if activity_flag and line.startswith("- name: "):
+                activity_flag = False
+                activity = line.replace("- name: ", "").strip()
+                activities.append(activity)
+                continue
+    return permissions, activities

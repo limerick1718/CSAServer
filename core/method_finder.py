@@ -13,8 +13,6 @@ class MethodFinder:
         self.cg = CG(apk_name)
         self.neeed_slicing = neeed_slicing
         self.apk_name = apk_name
-        self.to_remove_methods = []
-        self.executed_methods = []
 
     def set_to_remove_permission(self, permissions: list):
         # save to
@@ -27,22 +25,29 @@ class MethodFinder:
             for method in intersection:
                 to_remove_methods.append(method)
             logger.info(f"permission_methods: {to_remove_methods}")
-            self.to_remove_methods.extend(to_remove_methods)
-        self.slicing()
+        to_remove_methods = self.slicing(to_remove_methods)
+        return to_remove_methods, permissions
 
-    def set_to_remove_activity(self, activities: list):
+    def set_to_remove_activity(self, activities: list, update_permission: bool = False):
         to_remove_methods = []
+        to_remove_permissions = []
         for activity in activities:
             logger.info(f"Debloat activity {activity} for {self.apk_name}")
             members = self.cg.get_members(activity)
             logger.info(f"activity_methods: {members}")
             to_remove_methods.extend(members)
-        self.to_remove_methods.extend(to_remove_methods)
         if self.neeed_slicing:
-            self.slicing()
-
-    def set_executed_methods(self, executed_methods: list):
-        self.executed_methods = executed_methods
+            to_remove_methods = self.slicing(to_remove_methods)
+        if update_permission:
+            permissions, activities = util.parse_manifest(self.apk_name)
+            to_keep_methods = list(set(self.cg.methods) - set(to_remove_methods))
+            for permission in permissions:
+                permission_methods = set(util.get_permission_api(permission))
+                intersection_remove = list(permission_methods & set(to_remove_methods))
+                intersection_keep = list(permission_methods & set(to_keep_methods))
+                if len(intersection_remove) > 0 and len(intersection_keep) == 0:
+                    to_remove_permissions.append(permission)
+        return to_remove_methods, to_remove_permissions
 
     def find_proceed_methods(self, to_keep_methods: list, similarities: pd.DataFrame):
         sources_dict = self.cg.sources
@@ -65,10 +70,10 @@ class MethodFinder:
                     to_process_list.append(max_similarity_method)
         return to_keep_methods
 
-    def generalization(self, threshold: float):
-        to_keep_methods = self.executed_methods.copy()
+    def generalization(self, threshold: float, executed_methods: list):
+        to_keep_methods = executed_methods.copy()
         similarities = pd.read_csv(const.get_similarity_file(self.apk_name), index_col=0)
-        for method in self.executed_methods:
+        for method in executed_methods:
             similarity = similarities[method]
             similar_methods = similarity[similarity > threshold].index
             to_keep_methods.extend(similar_methods.to_list())
@@ -80,11 +85,10 @@ class MethodFinder:
                 to_remove_methods.remove(method)
         return to_remove_methods
 
-    def slicing(self):
+    def slicing(self, to_remove_methods):
         dst_srcs_dict = self.cg.sources
         src_dsts_dict = self.cg.targets
-        buffer = self.to_remove_methods.copy()
-        removed_methods = self.to_remove_methods
+        buffer = to_remove_methods.copy()
         while len(buffer) > 0:
             for method in buffer:
                 buffer.remove(method)
@@ -112,13 +116,5 @@ class MethodFinder:
                                 buffer.append(dst)
                             dst_srcs_dict[dst] = srcs
                     src_dsts_dict.pop(method)
-            removed_methods.extend(buffer)
-        return removed_methods
-
-    def get_removed_methods(self):
-        # for method in self.to_remove_methods:
-        #     if util.is_skipped_package(method):
-        #         self.to_remove_methods.remove(method)
-        return set(self.to_remove_methods)
-
-
+            to_remove_methods.extend(buffer)
+        return to_remove_methods

@@ -28,3 +28,6 @@ def get_index_file(apk_name: str):
     similarity_dir = "results/embedding/node2vec/{apk_name}"
     os.makedirs(similarity_dir, exist_ok=True)
     return f"results/embedding/node2vec/{apk_name}/index.csv"
+
+def get_manifest_file(apk_name: str):
+    return f"results/cg/{apk_name}/ManifestInfo/AndroidManifest.txt"
