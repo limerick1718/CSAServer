@@ -52,7 +52,7 @@ class CG:
         if class_name not in self.members:
             logger.debug(f"Classes in {self.apk_name} are {self.members.keys()}")
             return []
-        return self.members[class_name]
+        return list(set(self.members[class_name]))
 
 
 
