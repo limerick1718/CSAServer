@@ -52,18 +52,26 @@ async def create_upload_file(file: UploadFile):
 # curl -F 'file=@/Users/jiakun/Projects/CSAServer/apks/org.woheller69.spritpreise-24.apk' http://localhost:1992/uploadfile
 
 @app.post("/get_acitivity")
-async def check_uploaded(package_name: str, version_code: int):
+async def get_acitivity(package_name: str, version_code: int):
     apk_name = f"{package_name}-{version_code}"
     _, activities = util.parse_manifest(apk_name)
     return {"activities": activities}
 # curl -X POST http://localhost:1992/get_acitivity?package_name=org.woheller69.spritpreise&version_code=24
 
 @app.post("/get_permission")
-async def check_uploaded(package_name: str, version_code: int):
+async def get_permission(package_name: str, version_code: int):
     apk_name = f"{package_name}-{version_code}"
     permissions, _ = util.parse_manifest(apk_name)
     return {"permissions": permissions}
 # curl -X POST http://localhost:1992/get_permission?package_name=org.woheller69.spritpreise&version_code=24
+
+@app.post("/get_permission_acitivity_mapping")
+async def get_permission_acitivity_mapping(package_name: str, version_code: int):
+    apk_name = f"{package_name}-{version_code}"
+    mf = MethodFinder(apk_name)
+    mapping = mf.get_permission_acitivity_mapping()
+    return {"acitivy_permissions": mapping}
+# curl -X POST http://localhost:1992/get_permission_acitivity_mapping?package_name=org.woheller69.spritpreise&version_code=24
 
 @app.post("/debloat_activity")
 async def debloat_activity(package_name: str, version_code: int, activity_names: str):

@@ -28,6 +28,23 @@ class MethodFinder:
         to_remove_methods = self.slicing(to_remove_methods)
         return to_remove_methods, permissions
 
+    def get_permission_acitivity_mapping(self):
+        result_dict = {}
+        permissions, activities = util.parse_manifest(self.apk_name)
+        for activity in activities:
+            to_remove_permissions = []
+            logger.info(f"Debloat activity {activity} for {self.apk_name}")
+            members = self.cg.get_members(activity)
+            logger.info(f"activity_methods: {members}")
+            to_remove_methods = self.slicing(members)
+            for permission in permissions:
+                permission_methods = set(util.get_permission_api(permission))
+                intersection_remove = list(permission_methods & set(to_remove_methods))
+                if len(intersection_remove) > 0:
+                    to_remove_permissions.append(permission)
+            result_dict[activity] = to_remove_permissions
+        return result_dict
+    
     def set_to_remove_activity(self, activities: list, update_permission: bool = False):
         to_remove_methods = []
         to_remove_permissions = []
