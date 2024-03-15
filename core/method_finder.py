@@ -71,21 +71,26 @@ class MethodFinder:
         sources_dict = self.cg.sources
         to_process_list = to_keep_methods.copy()
         while len(to_process_list) > 0:
-            method = to_process_list.pop()
-            if method not in sources_dict:
-                continue
-            sources = sources_dict[method]
-            intersection = list(set(sources) & set(to_keep_methods))
-            if len(sources) == 1:
-                to_keep_methods.append(sources[0])
-                to_process_list.append(sources[0])
-                continue
-            if len(intersection) == 0:
-                if method in similarities:
-                    similarity = similarities[method]
-                    max_similarity_method = similarity[sources].idxmax()
-                    to_keep_methods.append(max_similarity_method)
-                    to_process_list.append(max_similarity_method)
+            try:
+                method = to_process_list.pop()
+                if method not in sources_dict:
+                    continue
+                sources = sources_dict[method]
+                intersection = list(set(sources) & set(to_keep_methods))
+                if len(sources) == 1:
+                    to_keep_methods.append(sources[0])
+                    to_process_list.append(sources[0])
+                    continue
+                if len(intersection) == 0:
+                    if method in similarities:
+                        similarity = similarities[method]
+                        max_similarity_method = similarity[sources].idxmax()
+                        to_keep_methods.append(max_similarity_method)
+                        to_process_list.append(max_similarity_method)
+            except Exception as e:
+                logger.error(f"Error processing method: {method}")
+                logger.error(e)
+                pass
         return to_keep_methods
 
     def generalization(self, threshold: float, executed_methods: list):

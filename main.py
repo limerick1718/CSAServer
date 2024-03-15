@@ -53,6 +53,7 @@ async def create_upload_file(file: UploadFile):
 
 
 # curl -F 'file=@/Users/jiakun/Projects/CSAServer/apks/org.woheller69.spritpreise-24.apk' http://localhost:8000/uploadfile
+# curl -F 'file=@/Users/jiakun/Downloads/apks/wikipedia.apk' http://localhost:1992/uploadfile
 
 @app.post("/get_acitivity")
 async def get_acitivity(package_name: str, version_code: int):
@@ -71,6 +72,23 @@ async def get_permission(package_name: str, version_code: int):
 
 
 # curl -X POST http://localhost:1992/get_permission?package_name=org.woheller69.spritpreise&version_code=24
+
+@app.post("/get_screenshots")
+async def get_permission(package_name: str, version_code: int):
+    apk_name = f"{package_name}-{version_code}"
+    _, activities = util.parse_manifest(apk_name)
+    temp_activities = [activity.replace(package_name, "") for activity in activities]
+    activities.extend(temp_activities)
+    logger.info(f"activities for {activities}")
+    screenshot_dir = f"results/screenshots/{apk_name}"
+    screenshot_files = [file.replace('.png', '') for file in os.listdir(screenshot_dir)]
+    logger.info(f"screenshot_files for {screenshot_files}")
+    intersection = list(set(activities) & set(screenshot_files))
+    urls = [f"https://raw.githubusercontent.com/limerick1718/CSAServer/master/results/screenshots/{apk_name}/{activity}.png" for activity in intersection]
+    return {"screenshots": urls}
+
+# curl -X POST http://localhost:1992/get_screenshots?package_name=org.woheller69.spritpreise&version_code=24
+# curl -X POST http://localhost:1992/get_screenshots?package_name=org.wikipedia.alpha&version_code=50476
 
 @app.post("/get_permission_acitivity_mapping")
 async def get_permission_acitivity_mapping(package_name: str, version_code: int):
@@ -121,18 +139,35 @@ async def get_similarity(package_name: str, version_code: int):
 
 
 #  curl http://localhost:1992/record?package_name=org.woheller69.spritpreise&version_code=24
+#  curl http://localhost:1992/record?package_name=com.amaze.filemanager&version_code=117
+#  curl http://localhost:1992/record?package_name=org.wikipedia&version_code=268
+#  curl http://localhost:1992/record?package_name=com.zhiliaoapp.musically&version_code=2022903010
+#  curl http://localhost:1992/record?package_name=org.woheller69.spritpreise&version_code=18
 
-@app.post("/generalization")
+@app.post("/similar")
 async def generalization(package_name: str, version_code: int, executed_methods: str):
     apk_name = f"{package_name}-{version_code}"
     mf = MethodFinder(apk_name)
     executed_methods = unquote(executed_methods)
     logger.info(f"Generalization for {apk_name} with {executed_methods}")
     result_dict = {}
-    for threshold in [0.9]:
-        # for threshold in [0.3, 0.6, 0.9]:
-        to_remove_methods = mf.generalization(threshold, executed_methods.split(","))
-        result_dict[threshold] = to_remove_methods
+    threshold = 0.7
+    to_remove_methods = mf.generalization(threshold, executed_methods.split(","))
+    result_dict[threshold] = to_remove_methods
     result = json.dumps(result_dict)
     return {"to_remove_methods": result}
-# curl -X POST http://localhost:1992/generalization?package_name=org.woheller69.spritpreise&version_code=24&executed_methods=%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20org.woheller69.spritpreise.database.CityToWatch%20convertCityToWatched%28org.woheller69.spritpreise.database.City%29%3E%2C%3Corg.woheller69.spritpreise.activities.AboutActivity%3A%20int%20getNavigationDrawerID%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.AboutActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onResume%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onDestroy%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20addCityToList%28org.woheller69.spritpreise.database.City%29%3E%2C%3Corg.woheller69.spritpreise.activities.AboutActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20int%20getNavigationDrawerID%28%29%3E
+# curl -X POST http://localhost:1992/similar?package_name=org.woheller69.spritpreise&version_code=24&executed_methods=%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20org.woheller69.spritpreise.database.CityToWatch%20convertCityToWatched%28org.woheller69.spritpreise.database.City%29%3E%2C%3Corg.woheller69.spritpreise.activities.AboutActivity%3A%20int%20getNavigationDrawerID%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.AboutActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onResume%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onDestroy%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20addCityToList%28org.woheller69.spritpreise.database.City%29%3E%2C%3Corg.woheller69.spritpreise.activities.AboutActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20int%20getNavigationDrawerID%28%29%3E
+
+@app.post("/more")
+async def generalization(package_name: str, version_code: int, executed_methods: str):
+    apk_name = f"{package_name}-{version_code}"
+    mf = MethodFinder(apk_name)
+    executed_methods = unquote(executed_methods)
+    logger.info(f"Generalization for {apk_name} with {executed_methods}")
+    result_dict = {}
+    threshold = 0.9
+    to_remove_methods = mf.generalization(threshold, executed_methods.split(","))
+    result_dict[threshold] = to_remove_methods
+    result = json.dumps(result_dict)
+    return {"to_remove_methods": result}
+# curl -X POST http://localhost:1992/more?package_name=org.woheller69.spritpreise&version_code=24&executed_methods=%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20org.woheller69.spritpreise.database.CityToWatch%20convertCityToWatched%28org.woheller69.spritpreise.database.City%29%3E%2C%3Corg.woheller69.spritpreise.activities.AboutActivity%3A%20int%20getNavigationDrawerID%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.AboutActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onResume%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onDestroy%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20addCityToList%28org.woheller69.spritpreise.database.City%29%3E%2C%3Corg.woheller69.spritpreise.activities.AboutActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20int%20getNavigationDrawerID%28%29%3E
