@@ -55,11 +55,11 @@ async def create_upload_file(file: UploadFile):
 # curl -F 'file=@/Users/jiakun/Projects/CSAServer/apks/org.woheller69.spritpreise-24.apk' http://localhost:8000/uploadfile
 # curl -F 'file=@/Users/jiakun/Downloads/apks/wikipedia.apk' http://localhost:1992/uploadfile
 
-@app.post("/get_acitivity")
-async def get_acitivity(package_name: str, version_code: int):
-    apk_name = f"{package_name}-{version_code}"
-    _, activities = util.parse_manifest(apk_name)
-    return {"activities": activities}
+# @app.post("/get_acitivity")
+# async def get_acitivity(package_name: str, version_code: int):
+#     apk_name = f"{package_name}-{version_code}"
+#     _, activities = util.parse_manifest(apk_name)
+#     return {"activities": activities}
 
 
 # curl -X POST http://localhost:1992/get_acitivity?package_name=org.woheller69.spritpreise&version_code=24
@@ -73,22 +73,22 @@ async def get_permission(package_name: str, version_code: int):
 
 # curl -X POST http://localhost:1992/get_permission?package_name=org.woheller69.spritpreise&version_code=24
 
-@app.post("/get_screenshots")
+@app.post("/get_acitivities")
 async def get_permission(package_name: str, version_code: int):
     apk_name = f"{package_name}-{version_code}"
     _, activities = util.parse_manifest(apk_name)
-    temp_activities = [activity.replace(package_name, "") for activity in activities]
-    activities.extend(temp_activities)
     logger.info(f"activities for {activities}")
     screenshot_dir = f"results/screenshots/{apk_name}"
     screenshot_files = [file.replace('.png', '') for file in os.listdir(screenshot_dir)]
     logger.info(f"screenshot_files for {screenshot_files}")
     intersection = list(set(activities) & set(screenshot_files))
-    urls = [f"https://raw.githubusercontent.com/limerick1718/CSAServer/master/results/screenshots/{apk_name}/{activity}.png" for activity in intersection]
-    return {"screenshots": urls}
+    # urls = [f"https://raw.githubusercontent.com/limerick1718/CSAServer/master/results/screenshots/{apk_name}/{activity}.png" for activity in intersection]
+    return {"activities": intersection}
 
 # curl -X POST http://localhost:1992/get_screenshots?package_name=org.woheller69.spritpreise&version_code=24
 # curl -X POST http://localhost:1992/get_screenshots?package_name=org.wikipedia.alpha&version_code=50476
+# curl -X POST http://localhost:1992/get_screenshots?package_name=com.amaze.filemanager&version_code=117
+# curl -X POST http://localhost:1992/get_screenshots?package_name=com.zhiliaoapp.musically&version_code=2022903010
 
 @app.post("/get_permission_acitivity_mapping")
 async def get_permission_acitivity_mapping(package_name: str, version_code: int):
