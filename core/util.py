@@ -102,7 +102,8 @@ def is_skipped_package(method_name: str):
                               "org.apache.",
                               "org.eclipse.",
                               "org.junit.",
-                              "com.fasterxml."
+                              "com.fasterxml.",
+                              "com.android"
                               ]
     for temp_package_prefix in skipped_package_prefix:
         if class_name.startswith(temp_package_prefix):

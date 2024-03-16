@@ -12,7 +12,7 @@ from core import const, util
 from core.method_finder import MethodFinder
 import log_config
 
-# uvicorn main:app --host 0.0.0.0 --port 1992 % --reload
+# uvicorn main:app --host 0.0.0.0 --port 1992 --reload
 app = FastAPI()
 
 logger = logging.getLogger("main")
@@ -85,10 +85,10 @@ async def get_permission(package_name: str, version_code: int):
     # urls = [f"https://raw.githubusercontent.com/limerick1718/CSAServer/master/results/screenshots/{apk_name}/{activity}.png" for activity in intersection]
     return {"activities": intersection}
 
-# curl -X POST http://localhost:1992/get_screenshots?package_name=org.woheller69.spritpreise&version_code=24
-# curl -X POST http://localhost:1992/get_screenshots?package_name=org.wikipedia.alpha&version_code=50476
-# curl -X POST http://localhost:1992/get_screenshots?package_name=com.amaze.filemanager&version_code=117
-# curl -X POST http://localhost:1992/get_screenshots?package_name=com.zhiliaoapp.musically&version_code=2022903010
+# curl -X POST http://localhost:1992/get_acitivities?package_name=org.woheller69.spritpreise&version_code=24
+# curl -X POST http://localhost:1992/get_acitivities?package_name=org.wikipedia.alpha&version_code=50476
+# curl -X POST http://localhost:1992/get_acitivities?package_name=com.amaze.filemanager&version_code=117
+# curl -X POST http://localhost:1992/get_acitivities?package_name=com.zhiliaoapp.musically&version_code=2022903010
 
 @app.post("/get_permission_acitivity_mapping")
 async def get_permission_acitivity_mapping(package_name: str, version_code: int):
@@ -143,6 +143,18 @@ async def get_similarity(package_name: str, version_code: int):
 #  curl http://localhost:1992/record?package_name=org.wikipedia&version_code=268
 #  curl http://localhost:1992/record?package_name=com.zhiliaoapp.musically&version_code=2022903010
 #  curl http://localhost:1992/record?package_name=org.woheller69.spritpreise&version_code=18
+
+@app.post("/keeponly")
+async def generalization(package_name: str, version_code: int, executed_methods: str):
+    apk_name = f"{package_name}-{version_code}"
+    mf = MethodFinder(apk_name)
+    executed_methods = unquote(executed_methods)
+    logger.info(f"Generalization for {apk_name} with {executed_methods}")
+    to_remove_methods = mf.keep_only(executed_methods.split(","))
+    return {"to_remove_methods": to_remove_methods}
+
+# curl -X POST http://localhost:1992/keeponly?package_name=org.woheller69.spritpreise&version_code=24&executed_methods=%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20org.woheller69.spritpreise.database.CityToWatch%20convertCityToWatched%28org.woheller69.spritpreise.database.City%29%3E%2C%3Corg.woheller69.spritpreise.activities.AboutActivity%3A%20int%20getNavigationDrawerID%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.AboutActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onResume%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onDestroy%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20addCityToList%28org.woheller69.spritpreise.database.City%29%3E%2C%3Corg.woheller69.spritpreise.activities.AboutActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20int%20getNavigationDrawerID%28%29%3E
+
 
 @app.post("/similar")
 async def generalization(package_name: str, version_code: int, executed_methods: str):

@@ -93,6 +93,16 @@ class MethodFinder:
                 pass
         return to_keep_methods
 
+    def keep_only(self, executed_methods: list):
+        to_keep_methods = executed_methods.copy()
+        to_remove_methods = list(set(self.cg.methods) - set(to_keep_methods))
+        result = []
+        for method in to_remove_methods:
+            if util.is_skipped_package(method):
+                continue
+            result.append(method)
+        return result
+
     def generalization(self, threshold: float, executed_methods: list):
         to_keep_methods = executed_methods.copy()
         similarities = pd.read_csv(const.get_similarity_file(self.apk_name), index_col=0)
@@ -102,11 +112,13 @@ class MethodFinder:
             to_keep_methods.extend(similar_methods.to_list())
         to_keep_methods = list(set(to_keep_methods))
         related_methods = self.find_proceed_methods(to_keep_methods, similarities)
-        to_remove_methods = list(set(self.cg.methods) - set(related_methods))
+        to_remove_methods = set(self.cg.methods) - set(related_methods)
+        result = []
         for method in to_remove_methods:
             if util.is_skipped_package(method):
-                to_remove_methods.remove(method)
-        return to_remove_methods
+                continue
+            result.append(method)
+        return result
 
     def forward_slicing(self, to_remove_methods):
         src_dsts_dict = self.cg.targets
