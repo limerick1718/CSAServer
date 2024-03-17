@@ -8,3 +8,5 @@ scikit-learn~=1.4.1.post1
 uvicorn[standard]
 python-multipart
 setuptools
+pecanpy
+pyarrow

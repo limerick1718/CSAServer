@@ -2,6 +2,10 @@
 import os
 import subprocess
 
+import numpy as np
+import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
+
 from core import const
 import logging
 
@@ -137,3 +141,30 @@ def parse_manifest(apk_name: str):
                 activities.append(activity)
                 continue
     return permissions, activities
+
+def read_graph_embedding(embedding_file):
+    embedding_map = {}
+    with open(embedding_file) as f:
+        for line in f.readlines():
+            line = str(line)
+            if '>' in line:
+                splitter = line.rfind('>')
+                method_name = line[:splitter + 1]
+                embedding_str = line[splitter + 1:]
+                embedding = []
+                embedding_splits = embedding_str.split()
+                for value in embedding_splits:
+                    embedding.append(float(value))
+                embedding_map[method_name] = np.array(embedding)
+    result = pd.DataFrame.from_dict(embedding_map, orient='index')
+    return result
+
+def calculate_similarity(apk_name: str):
+    embedding_file = const.get_embedding_file(apk_name)
+    logger.log(f"Read embedding of {apk_name}")
+    X = read_graph_embedding(embedding_file)
+    logger.log(f"Begin to calculate the cosine similarity of {apk_name}")
+    similarity = cosine_similarity(X, X)
+    logger.log(f"wrap in df {apk_name}")
+    similarities = pd.DataFrame(similarity, index=X.index, columns=X.index)
+    return similarities

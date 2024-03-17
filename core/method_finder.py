@@ -9,8 +9,8 @@ logger = logging.getLogger("MethodFinder")
 
 
 class MethodFinder:
-    def __init__(self, apk_name: str, neeed_slicing: bool = False):
-        self.cg = CG(apk_name)
+    def __init__(self, apk_name: str, cg: CG, neeed_slicing: bool = False):
+        self.cg = cg
         self.neeed_slicing = neeed_slicing
         self.apk_name = apk_name
 
@@ -103,9 +103,8 @@ class MethodFinder:
             result.append(method)
         return result
 
-    def generalization(self, threshold: float, executed_methods: list):
+    def generalization(self, threshold: float, executed_methods: list, similarities: pd.DataFrame):
         to_keep_methods = executed_methods.copy()
-        similarities = pd.read_csv(const.get_similarity_file(self.apk_name), index_col=0)
         for method in executed_methods:
             similarity = similarities[method]
             similar_methods = similarity[similarity > threshold].index
