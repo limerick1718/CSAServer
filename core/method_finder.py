@@ -108,6 +108,7 @@ class MethodFinder:
             to_keep_methods_indices.extend(similar_methods_indices)
         to_keep_methods = [indices[i] for i in to_keep_methods_indices]
         related_methods = self.find_proceed_methods(to_keep_methods)
+        logger.info(f"related_methods: {related_methods}")
         to_remove_methods = set(self.cg.methods) - set(related_methods)
         result = []
         for method in to_remove_methods:

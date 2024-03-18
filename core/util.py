@@ -95,18 +95,18 @@ def parse_method_signature(method):
 def is_skipped_package(method_name: str):
     class_name, _, _, _ = parse_method_signature(method_name)
     skipped_package_prefix = ["android",
-                              "androidx.",
-                              "kotlin.",
-                              "com.google.",
-                              "soot.",
-                              "junit.",
-                              "java.",
-                              "javax.",
-                              "sun.",
-                              "org.apache.",
-                              "org.eclipse.",
-                              "org.junit.",
-                              "com.fasterxml.",
+                              "androidx",
+                              "kotlin",
+                              "com.google",
+                              "soot",
+                              "junit",
+                              "java",
+                              "javax",
+                              "sun",
+                              "org.apache",
+                              "org.eclipse",
+                              "org.junit",
+                              "com.fasterxml",
                               "com.android"
                               ]
     for temp_package_prefix in skipped_package_prefix:
