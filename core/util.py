@@ -161,10 +161,18 @@ def read_graph_embedding(embedding_file):
 
 def calculate_similarity(apk_name: str):
     embedding_file = const.get_embedding_file(apk_name)
-    logger.log(f"Read embedding of {apk_name}")
+    logger.info(f"Read embedding of {apk_name}")
+    if not os.path.exists(embedding_file):
+        cg_file = const.get_cg_file(apk_name)
+        if not os.path.exists(cg_file):
+            logger.info(f"cg file not exists for {apk_name}")
+            return None
+        logger.info(f"calculating the embedding {apk_name}")
+        os.system(f"pecanpy --input {cg_file} --output {embedding_file} --mode FirstOrderUnweighted --delimiter ' -> '")
+        # subprocess.Popen(["pecanpy", "--input", const.get_cg_file(apk_name), "--output", embedding_file, "--mode", "FirstOrderUnweighted", "--delimiter", " -> "])
     X = read_graph_embedding(embedding_file)
-    logger.log(f"Begin to calculate the cosine similarity of {apk_name}")
+    logger.info(f"Begin to calculate the cosine similarity of {apk_name}")
     similarity = cosine_similarity(X, X)
-    logger.log(f"wrap in df {apk_name}")
+    logger.info(f"wrap in df {apk_name}")
     similarities = pd.DataFrame(similarity, index=X.index, columns=X.index)
     return similarities

@@ -139,18 +139,22 @@ async def debloat_permission(package_name: str, version_code: int, permissions: 
 # curl -X POST http://localhost:8000/debloat_permission?package_name=org.woheller69.spritpreise&version_code=24&permissions=android.permission.ACCESS_FINE_LOCATION,android.permission.ACCESS_COARSE_LOCATION,android.permission.ACCESS_BACKGROUND_LOCATION
 # curl -X POST http://localhost:1992/debloat_permission?package_name=com.zhiliaoapp.musically&version_code=2022903010&permissions=android.permission.RECEIVE_BOOT_COMPLETED,com.android.vending.BILLING,android.permission.FOREGROUND_SERVICE
 
-def get_similarity_df(apk_name: str):
-    similarity_path = const.get_similarity_file(apk_name)
-    if apk_name not in similarity_mapping:
-        # if os.path.exists(similarity_path):
-        #     logger.info(f"read from the file {apk_name}")
-        #     similarities = pd.read_csv(const.get_similarity_file(apk_name), index_col=0, chunksize=10000000)
-        #     similarity_mapping[apk_name] = similarities
-        # else:
+def initialize_similarity():
+    for apk_name in os.listdir("apks"):
+        apk_name = apk_name.replace(".apk", "")
         logger.info(f"calculating the cosine similarity {apk_name}")
         similarities = util.calculate_similarity(apk_name)
+        if similarities is None:
+            logger.info(f"Similarity for {apk_name} is not ready.")
+            continue
+        logger.info(f"Similarity for {apk_name} is ready.")
         similarity_mapping[apk_name] = similarities
-    logger.info(f"Similarity for {apk_name} is ready.")
+
+initialize_similarity()
+
+def get_similarity_df(apk_name: str):
+    if apk_name not in similarity_mapping:
+        return None
     return similarity_mapping[apk_name]
 
 @app.get("/record")
@@ -159,6 +163,10 @@ async def get_similarity(package_name: str, version_code: int):
     embedding_path = const.get_embedding_file(apk_name)
     # if not os.path.exists(embedding_path) or not os.path.exists(similarity_path):
     if not os.path.exists(embedding_path):
+        cg_file = const.get_cg_file(apk_name)
+        if not os.path.exists(cg_file):
+            logger.info(f"cg file not exists for {apk_name}")
+            return None
         logger.info(f"calculating the embedding {apk_name}")
         subprocess.Popen(["pecanpy", "--input", const.get_cg_file(apk_name), "--output", embedding_path, "--mode", "FirstOrderUnweighted", "--delimiter", " -> "])
     else:
@@ -196,6 +204,8 @@ async def generalization(package_name: str, version_code: int, executed_methods:
     result_dict = {}
     threshold = 0.7
     similarity_df = get_similarity_df(apk_name)
+    if similarity_df is None:
+        return {"to_remove_methods": "Similarity not ready"}
     to_remove_methods = mf.generalization(threshold, executed_methods.split("-,-"), similarity_df)
     result_dict[threshold] = to_remove_methods
     result = json.dumps(result_dict)
@@ -213,6 +223,8 @@ async def generalization(package_name: str, version_code: int, executed_methods:
     result_dict = {}
     threshold = 0.9
     similarity_df = get_similarity_df(apk_name)
+    if similarity_df is None:
+        return {"to_remove_methods": "Similarity not ready"}
     to_remove_methods = mf.generalization(threshold, executed_methods.split("-,-"), similarity_df)
     result_dict[threshold] = to_remove_methods
     result = json.dumps(result_dict)
