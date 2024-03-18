@@ -8,6 +8,7 @@ logger = logging.getLogger("cg_container")
 
 cg_dict = {}
 for apk_name in os.listdir("results/cg"):
+    apk_name = apk_name.replace(".apk", "")
     cg_dict[apk_name] = CG(apk_name)
     logger.info(f"Load cg for {apk_name}")
 

@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from core import const, util
@@ -67,7 +68,7 @@ class MethodFinder:
                     to_remove_permissions.append(permission)
         return to_remove_methods, to_remove_permissions
 
-    def find_proceed_methods(self, to_keep_methods: list, similarities: pd.DataFrame):
+    def find_proceed_methods(self, to_keep_methods: list):
         sources_dict = self.cg.sources
         to_process_list = to_keep_methods.copy()
         while len(to_process_list) > 0:
@@ -77,16 +78,9 @@ class MethodFinder:
                     continue
                 sources = sources_dict[method]
                 intersection = list(set(sources) & set(to_keep_methods))
-                if len(sources) == 1:
+                if len(intersection) == 0:
                     to_keep_methods.append(sources[0])
                     to_process_list.append(sources[0])
-                    continue
-                if len(intersection) == 0:
-                    if method in similarities:
-                        similarity = similarities[method]
-                        max_similarity_method = similarity[sources].idxmax()
-                        to_keep_methods.append(max_similarity_method)
-                        to_process_list.append(max_similarity_method)
             except Exception as e:
                 logger.error(f"Error processing method: {method}")
                 logger.error(e)
@@ -103,14 +97,16 @@ class MethodFinder:
             result.append(method)
         return result
 
-    def generalization(self, threshold: float, executed_methods: list, similarities: pd.DataFrame):
-        to_keep_methods = executed_methods.copy()
+    def generalization(self, threshold: float, executed_methods: list, similarity_matrix, indices: list):
+        to_keep_methods_indices = []
         for method in executed_methods:
-            similarity = similarities[method]
-            similar_methods = similarity[similarity > threshold].index
-            to_keep_methods.extend(similar_methods.to_list())
-        to_keep_methods = list(set(to_keep_methods))
-        related_methods = self.find_proceed_methods(to_keep_methods, similarities)
+            index = indices.index(method)
+            to_keep_methods_indices.append(index)
+            similarity = similarity_matrix[index]
+            similar_methods_indices = np.where(similarity == True)[0]
+            to_keep_methods_indices.extend(similar_methods_indices)
+        to_keep_methods = [indices[i] for i in to_keep_methods_indices]
+        related_methods = self.find_proceed_methods(to_keep_methods)
         to_remove_methods = set(self.cg.methods) - set(related_methods)
         result = []
         for method in to_remove_methods:

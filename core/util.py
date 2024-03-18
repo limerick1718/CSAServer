@@ -142,37 +142,16 @@ def parse_manifest(apk_name: str):
                 continue
     return permissions, activities
 
-def read_graph_embedding(embedding_file):
-    embedding_map = {}
-    with open(embedding_file) as f:
-        for line in f.readlines():
-            line = str(line)
-            if '>' in line:
-                splitter = line.rfind('>')
-                method_name = line[:splitter + 1]
-                embedding_str = line[splitter + 1:]
-                embedding = []
-                embedding_splits = embedding_str.split()
-                for value in embedding_splits:
-                    embedding.append(float(value))
-                embedding_map[method_name] = np.array(embedding)
-    result = pd.DataFrame.from_dict(embedding_map, orient='index')
-    return result
-
-def calculate_similarity(apk_name: str):
-    embedding_file = const.get_embedding_file(apk_name)
-    logger.info(f"Read embedding of {apk_name}")
-    if not os.path.exists(embedding_file):
-        cg_file = const.get_cg_file(apk_name)
-        if not os.path.exists(cg_file):
-            logger.info(f"cg file not exists for {apk_name}")
-            return None
-        logger.info(f"calculating the embedding {apk_name}")
-        os.system(f"pecanpy --input {cg_file} --output {embedding_file} --mode FirstOrderUnweighted --delimiter ' -> '")
-        # subprocess.Popen(["pecanpy", "--input", const.get_cg_file(apk_name), "--output", embedding_file, "--mode", "FirstOrderUnweighted", "--delimiter", " -> "])
-    X = read_graph_embedding(embedding_file)
-    logger.info(f"Begin to calculate the cosine similarity of {apk_name}")
-    similarity = cosine_similarity(X, X)
-    logger.info(f"wrap in df {apk_name}")
-    similarities = pd.DataFrame(similarity, index=X.index, columns=X.index)
-    return similarities
+def load_similarity_file(apk_name: str, threshold: float):
+    embedding_file = const.get_similarity_file(apk_name, threshold)
+    index_file = const.get_index_file(apk_name)
+    indices = []
+    with open(index_file, "r") as f:
+        lines = f.readlines()
+        for line in lines:
+            indices.append(line.strip())
+    with open(embedding_file, 'rb') as f:
+        similarity_matrix = np.load(f)
+    # df = pd.DataFrame(similarity, index=indices, columns=indices)
+    # print(df.head())
+    return similarity_matrix, indices
