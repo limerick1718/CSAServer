@@ -1,17 +1,12 @@
-import argparse
+import logging
 import os
 import pathlib
 
-import networkx as nx
 import numpy as np
 import pandas as pd
-from node2vec import Node2Vec
-
 from sklearn.metrics.pairwise import cosine_similarity
 
-from core import const, util
-
-import logging
+from core import const
 
 logger = logging.getLogger("similarity_cal")
 

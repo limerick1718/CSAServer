@@ -1,10 +1,9 @@
-import numpy as np
-import pandas as pd
-
-from core import const, util
-from core.cg import CG
-
 import logging
+
+import numpy as np
+
+from core import util
+from core.cg import CG
 
 logger = logging.getLogger("MethodFinder")
 
@@ -97,9 +96,11 @@ class MethodFinder:
             result.append(method)
         return result
 
-    def generalization(self, threshold: float, executed_methods: list, similarity_matrix, indices: list):
+    def generalization(self, executed_methods: list, similarity_matrix, indices: list):
         to_keep_methods_indices = []
         for method in executed_methods:
+            if method not in indices:
+                continue
             index = indices.index(method)
             to_keep_methods_indices.append(index)
             similarity = similarity_matrix[index]

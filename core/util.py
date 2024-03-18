@@ -2,9 +2,9 @@
 import os
 import subprocess
 
+from urllib.parse import unquote
+
 import numpy as np
-import pandas as pd
-from sklearn.metrics.pairwise import cosine_similarity
 
 from core import const
 import logging
@@ -152,6 +152,11 @@ def load_similarity_file(apk_name: str, threshold: float):
             indices.append(line.strip())
     with open(embedding_file, 'rb') as f:
         similarity_matrix = np.load(f)
-    # df = pd.DataFrame(similarity, index=indices, columns=indices)
-    # print(df.head())
     return similarity_matrix, indices
+
+def extract_methods_from_requests(executed_methods_str: str):
+    executed_methods_str = unquote(executed_methods_str.strip())
+    executed_methods_str = executed_methods_str[1:-1]
+    executed_methods = executed_methods_str.split(">,<")
+    methods = [f"<{method.strip()}>" for method in executed_methods]
+    return methods
