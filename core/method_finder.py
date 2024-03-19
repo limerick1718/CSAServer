@@ -65,14 +65,17 @@ class MethodFinder:
                 intersection_keep = list(permission_methods & set(to_keep_methods))
                 if len(intersection_remove) > 0 and len(intersection_keep) == 0:
                     to_remove_permissions.append(permission)
+        # currently, debloating activity looks good. We did not filter out activity lifecycle methods.
+        # If the result is not good, we can filter out activity lifecycle methods.
+        # to_remove_methods = self.filter_to_remove_methods(to_remove_methods)
         return to_remove_methods, to_remove_permissions
 
     def find_proceed_methods(self, to_keep_methods: list):
         sources_dict = self.cg.sources
         to_process_list = to_keep_methods.copy()
         while len(to_process_list) > 0:
+            method = to_process_list.pop()
             try:
-                method = to_process_list.pop()
                 if method not in sources_dict:
                     continue
                 sources = sources_dict[method]
@@ -86,15 +89,25 @@ class MethodFinder:
                 pass
         return to_keep_methods
 
-    def keep_only(self, executed_methods: list):
-        to_keep_methods = executed_methods.copy()
-        to_remove_methods = list(set(self.cg.methods) - set(to_keep_methods))
+    def filter_to_remove_methods(self, to_remove_methods: list):
         result = []
         for method in to_remove_methods:
             if util.is_skipped_package(method):
                 continue
+            if "<init>" in method or "<clinit>" in method:
+                continue
+            # if android lifecycle method
+            if "onCreate" in method or "onStart" in method or "onResume" in method or "onPause" in method or "onStop" in method or "onDestroy" in method:
+                continue
             result.append(method)
         logger.info(f"removed methods: {result}")
+        logger.info(f"removed methods size: {len(result)}")
+        return result
+
+    def keep_only(self, executed_methods: list):
+        to_keep_methods = executed_methods.copy()
+        to_remove_methods = list(set(self.cg.methods) - set(to_keep_methods))
+        result = self.filter_to_remove_methods(to_remove_methods)
         return result
 
     def generalization(self, executed_methods: list, similarity_matrix, indices: list):
@@ -110,13 +123,8 @@ class MethodFinder:
         to_keep_methods = [indices[i] for i in to_keep_methods_indices]
         related_methods = self.find_proceed_methods(to_keep_methods)
         logger.info(f"related_methods: {related_methods}")
-        to_remove_methods = set(self.cg.methods) - set(related_methods)
-        result = []
-        for method in to_remove_methods:
-            if util.is_skipped_package(method):
-                continue
-            result.append(method)
-        logger.info(f"removed methods: {result}")
+        to_remove_methods = list(set(self.cg.methods) - set(related_methods))
+        result = self.filter_to_remove_methods(to_remove_methods)
         return result
 
     def forward_slicing(self, to_remove_methods):
