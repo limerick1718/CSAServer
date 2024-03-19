@@ -154,9 +154,22 @@ def load_similarity_file(apk_name: str, threshold: float):
         similarity_matrix = np.load(f)
     return similarity_matrix, indices
 
+def parse_method_signature_from_request(method: str):
+    # <int com.google.android.material.color.MaterialColors.getColor(android.content.Context,int,int)> is in the format of <return_value class_name.method_name(parameters)>
+    method = method.strip()
+    method = method[1:-2]
+    return_value = method.split(' ')[0]
+    method = method.split(' ')[1]
+    params = method.split('(')[1]
+    class_name_and_method_name = method.split('(')[0]
+    method_name = class_name_and_method_name.split('.')[-1]
+    class_name = class_name_and_method_name.replace(f".{method_name}", "")
+    return f"<{class_name}: {return_value} {method_name}({params})>"
+
 def extract_methods_from_requests(executed_methods_str: str):
     executed_methods_str = unquote(executed_methods_str.strip())
     executed_methods_str = executed_methods_str[1:-1]
     executed_methods = executed_methods_str.split(">,<")
     methods = [f"<{method.strip()}>" for method in executed_methods]
+    methods = [parse_method_signature_from_request(method) for method in methods]
     return methods

@@ -94,6 +94,7 @@ class MethodFinder:
             if util.is_skipped_package(method):
                 continue
             result.append(method)
+        logger.info(f"removed methods: {result}")
         return result
 
     def generalization(self, executed_methods: list, similarity_matrix, indices: list):
@@ -115,6 +116,7 @@ class MethodFinder:
             if util.is_skipped_package(method):
                 continue
             result.append(method)
+        logger.info(f"removed methods: {result}")
         return result
 
     def forward_slicing(self, to_remove_methods):
