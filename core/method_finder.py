@@ -100,8 +100,6 @@ class MethodFinder:
             if "onCreate" in method or "onStart" in method or "onResume" in method or "onPause" in method or "onStop" in method or "onDestroy" in method:
                 continue
             result.append(method)
-        logger.info(f"removed methods: {result}")
-        logger.info(f"removed methods size: {len(result)}")
         return result
 
     def keep_only(self, executed_methods: list):

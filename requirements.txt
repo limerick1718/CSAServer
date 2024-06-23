@@ -10,3 +10,4 @@ python-multipart
 setuptools
 pecanpy
 pyarrow
+scipy==1.12

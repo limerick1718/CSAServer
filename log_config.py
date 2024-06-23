@@ -3,9 +3,8 @@ import time
 
 import os
 
-def init():
-    if not os.path.exists("log"):
-        os.makedirs("log")
+if not os.path.exists("log"):
+    os.makedirs("log")
 
 # time in yyyy-mm-dd-hh-mm-ss
 current_time = time.strftime("%Y-%m-%d-%H-%M-%S")

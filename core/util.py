@@ -66,8 +66,6 @@ def read_permission_mappings():
                         logger.error(f"Error parsing line: {line}")
                         logger.error(e)
 
-    logger.debug(f"permission_mappings: {permission_mappings}")
-
 def get_permission_api(permission: str):
     if len(permission_mappings) == 0:
         read_permission_mappings()
@@ -156,6 +154,7 @@ def load_similarity_file(apk_name: str, threshold: float):
 
 def parse_method_signature_from_request(method: str):
     # <int com.google.android.material.color.MaterialColors.getColor(android.content.Context,int,int)> is in the format of <return_value class_name.method_name(parameters)>
+    logger.info(f"parse_method_signature_from_request Method: {method}")
     method = method.strip()
     method = method[1:-2]
     return_value = method.split(' ')[0]

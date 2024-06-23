@@ -35,6 +35,7 @@ def process_node2vec(apk_name: str):
     if not pathlib.Path(cg_file).exists():
         logger.info(f"CG file not found for {apk_name}")
         os.system(f"java -jar lib/ICCBot.jar -path apks/ -name {apk_name}.apk androidJar lib/platforms -time 30 -maxPathNumber 100 -client CallGraphClient -outputDir results/cg")
+    print(f"pecanpy --input {cg_file} --output {embedding_file} --mode FirstOrderUnweighted --delimiter ' -> '")
     os.system(f"pecanpy --input {cg_file} --output {embedding_file} --mode FirstOrderUnweighted --delimiter ' -> '")
 
 def calculate_similarity(apk_name: str):
