@@ -172,3 +172,21 @@ def extract_methods_from_requests(executed_methods_str: str):
     methods = [f"<{method.strip()}>" for method in executed_methods]
     methods = [parse_method_signature_from_request(method) for method in methods]
     return methods
+
+def keep_package_only(to_remove_methods: list, packages: list):
+    if "com.zhiliaoapp.musically" in packages:
+        packages.append("com.ss.")
+        packages.append("com.bytedance.")
+    packages = ["<" + package for package in packages]
+    result = set()
+    logger.info(f"Number of to_remove_methods before filter package only : {len(to_remove_methods)}")
+    for method in to_remove_methods:
+        is_package_method = False
+        for package in packages:
+            if method.startswith(package):
+                is_package_method = True
+                break
+        if is_package_method == True:
+            result.add(method)
+    logger.info(f"Number of to_remove_methods AFTER filter package only : {len(result)}")
+    return list(result)

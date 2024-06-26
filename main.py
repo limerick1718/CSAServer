@@ -1,5 +1,6 @@
 import logging
 import time
+import uvicorn
 
 import os
 
@@ -40,11 +41,9 @@ logger = logging.getLogger("Main")
 app = FastAPI()
 
 
-
-
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Hello World!!!!!"}
 
 
 @app.post("/check_uploaded")
@@ -88,7 +87,7 @@ async def get_permission(package_name: str, version_code: int):
 
 
 # curl -X POST http://101.32.239.114:1992/get_permission?package_name=org.woheller69.spritpreise&version_code=24
-# curl -X POST http://localhost:1994/get_permission?package_name=com.zhiliaoapp.musically&version_code=2022903010
+# curl -X POST http://101.32.239.114:1992/get_permission?package_name=com.zhiliaoapp.musically&version_code=2022903010
 
 @app.post("/get_acitivities")
 async def get_permission(package_name: str, version_code: int):
@@ -129,14 +128,18 @@ async def debloat_permission(package_name: str, version_code: int, permissions: 
     logger.info(f"Debloat permission {permissions} for {apk_name}")
     permissions = permissions.split(",")
     cg = cg_container.get_cg(apk_name)
-    mf = MethodFinder(apk_name, cg)
+    mf = MethodFinder(apk_name, cg, neeed_slicing=True)
     to_remove_methods, to_remove_permissions = mf.set_to_remove_permission(permissions)
+    to_remove_methods = util.keep_package_only(to_remove_methods, [package_name])
+    all_methods = [method for method in mf.cg.methods if package_name in method]
+    logger.info(f"removed methods size: {len(to_remove_methods)} in all methods {len(all_methods)}")
     logger.debug(f"removed methods: {to_remove_methods}, removed permissions: {to_remove_permissions}")
     return {"to_remove_methods": to_remove_methods, "to_remove_permissions": to_remove_permissions}
 
 
 # curl -X POST http://101.32.239.114:1992/debloat_permission?package_name=org.woheller69.spritpreise&version_code=24&permissions=android.permission.ACCESS_FINE_LOCATION,android.permission.ACCESS_COARSE_LOCATION,android.permission.ACCESS_BACKGROUND_LOCATION
 # curl -X POST http://101.32.239.114:1992/debloat_permission?package_name=com.zhiliaoapp.musically&version_code=2022903010&permissions=android.permission.RECEIVE_BOOT_COMPLETED,com.android.vending.BILLING,android.permission.FOREGROUND_SERVICE
+# curl -X POST http://101.32.239.114:1992/debloat_permission?package_name=com.zhiliaoapp.musically&version_code=2022903010&permissions=android.permission.ACCESS_FINE_LOCATION,android.permission.ACCESS_COARSE_LOCATION,android.permission.ACCESS_BACKGROUND_LOCATION
 
 
 @app.post("/keeponly")
@@ -147,9 +150,8 @@ async def keeponly(package_name: str, version_code: int, executed_methods: str):
     mf = MethodFinder(apk_name, cg)
     executed_methods = util.extract_methods_from_requests(executed_methods)
     to_remove_methods = mf.keep_only(executed_methods)
-    to_remove_methods = [method for method in to_remove_methods if package_name in method]
+    to_remove_methods = util.keep_package_only(to_remove_methods, [package_name])
     all_methods = [method for method in mf.cg.methods if package_name in method]
-    logger.info(f"removed methods: {to_remove_methods}")
     logger.info(f"removed methods size: {len(to_remove_methods)} in all methods {len(all_methods)}")
     return {"to_remove_methods": to_remove_methods}
 
@@ -168,14 +170,13 @@ def generalization(package_name: str, version_code: int, executed_methods: str, 
     executed_methods = util.extract_methods_from_requests(executed_methods)
     logger.info(f"Generalization for {apk_name} with {executed_methods} using threshold {threshold}")
     to_remove_methods = mf.generalization(executed_methods, similarity_matrix, indices)
-    to_remove_methods = [method for method in to_remove_methods if package_name in method]
+    to_remove_methods = util.keep_package_only(to_remove_methods, [package_name])
     all_methods = [method for method in mf.cg.methods if package_name in method]
-    logger.info(f"removed methods: {to_remove_methods}")
     logger.info(f"removed methods size: {len(to_remove_methods)} in all methods {len(all_methods)}")
-    result_dict = {}
-    result_dict[threshold] = to_remove_methods
-    result = json.dumps(result_dict)
-    return result
+    # result_dict = {}
+    # result_dict[threshold] = to_remove_methods
+    # result = json.dumps(result_dict)
+    return to_remove_methods
 
 @app.post("/similar")
 async def similar(package_name: str, version_code: int, executed_methods: str):
@@ -192,3 +193,6 @@ async def more(package_name: str, version_code: int, executed_methods: str):
     return {"to_remove_methods": result}
 # curl -X POST http://101.32.239.114:1992/more?package_name=org.woheller69.spritpreise&version_code=24&executed_methods=%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20org.woheller69.spritpreise.database.CityToWatch%20convertCityToWatched%28org.woheller69.spritpreise.database.City%29%3E%2C%3C%20org.woheller69.spritpreise.activities.AboutActivity%3A%20int%20getNavigationDrawerID%28%29%3E%2C%3C%20org.woheller69.spritpreise.activities.AboutActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onResume%28%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onDestroy%28%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20addCityToList%28org.woheller69.spritpreise.database.City%29%3E%2C%3C%20org.woheller69.spritpreise.activities.AboutActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20int%20getNavigationDrawerID%28%29%3E
 # curl -X POST http://localhost:1992/more?package_name=com.zhiliaoapp.musically&version_code=2022903010&executed_methods=%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20android.content.Intent%20getIntent()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20X.X6W%20getInflater()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onStart()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onDestroy()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onStop()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onResume()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onCreate(android.os.Bundle)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onSaveInstanceState(android.os.Bundle)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ(X.GcL)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onPause()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ(X.GcK)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ(X.GcL)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZJ(X.GcK)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20%3Cinit%3E()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ(boolean)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ(com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20boolean%20dJ_()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ(boolean)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onRestoreInstanceState(android.os.Bundle)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20finish()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LJII()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20boolean%20LIZ(android.content.Intent)%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20java.lang.String%20getBtmPageCode()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onPause()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onStop()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20%3Cinit%3E()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20android.content.Intent%20getIntent()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onDestroy()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onStart()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onResume()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onCreate(android.os.Bundle)%3E
+
+if __name__=="__main__":
+    uvicorn.run(app, host="0.0.0.0", port=1992)

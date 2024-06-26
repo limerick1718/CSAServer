@@ -26,12 +26,12 @@ class CG:
         self.methods.add(src)
         self.methods.add(tgt)
         if tgt not in self.sources:
-            self.sources[tgt] = []
-        self.sources[tgt].append(src)
+            self.sources[tgt] = set()
+        self.sources[tgt].add(src)
 
         if src not in self.targets:
-            self.targets[src] = []
-        self.targets[src].append(tgt)
+            self.targets[src] = set()
+        self.targets[src].add(tgt)
 
         src_class = self.get_class_name(src)
         if src_class not in self.members:

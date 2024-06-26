@@ -25,7 +25,8 @@ class MethodFinder:
             for method in intersection:
                 to_remove_methods.append(method)
             logger.info(f"permission_methods: {to_remove_methods}")
-        to_remove_methods = self.slicing(to_remove_methods)
+        # to_remove_methods = self.forward_backward_joint_slicing(to_remove_methods)
+        to_remove_methods = self.backward_slicing(to_remove_methods)
         return to_remove_methods, permissions
 
     def get_permission_acitivity_mapping(self):
@@ -81,8 +82,8 @@ class MethodFinder:
                 sources = sources_dict[method]
                 intersection = list(set(sources) & set(to_keep_methods))
                 if len(intersection) == 0:
-                    to_keep_methods.append(sources[0])
-                    to_process_list.append(sources[0])
+                    to_keep_methods.append(list(sources)[0])
+                    to_process_list.append(list(sources)[0])
             except Exception as e:
                 logger.error(f"Error processing method: {method}")
                 logger.error(e)
@@ -99,7 +100,10 @@ class MethodFinder:
             # if android lifecycle method
             if "onCreate" in method or "onStart" in method or "onResume" in method or "onPause" in method or "onStop" in method or "onDestroy" in method:
                 continue
+            if "dummyMainClass" in method:
+                continue
             result.append(method)
+        logger.info(f"to_remove_methods size after filter : {len(result)}")
         return result
 
     def keep_only(self, executed_methods: list):
@@ -135,34 +139,87 @@ class MethodFinder:
                 buffer.extend(dsts)
                 to_remove_methods.extend(dsts)
         return to_remove_methods
+    
+    def backward_slicing(self, to_remove_methods):
+        dst_srcs_dict = self.cg.sources
+        processed = set()
+        buffer = to_remove_methods.copy()
+        processed.update(set(buffer))
+        while len(buffer) > 0:
+            method = buffer.pop()
+            if method in dst_srcs_dict:
+                srcs = set(dst_srcs_dict[method])
+                new_srcs = srcs.difference(processed)
+                buffer.extend(new_srcs)
+                processed.update(set(new_srcs))
+                to_remove_methods.extend(new_srcs)
+        logger.info(f"to_remove_methods size : {len(to_remove_methods)}")
+        to_remove_methods = self.filter_to_remove_methods(to_remove_methods)
+        return to_remove_methods
+    
+    def forward_backward_joint_slicing(self, to_remove_methods):
+        dst_srcs_dict = self.cg.sources.copy()
+        src_dsts_dict = self.cg.targets.copy()
+        buffer = to_remove_methods.copy()
+        while len(buffer) > 0:
+            logger.info(f"buffer size : {len(buffer)}")
+            method = buffer.pop()
+            if method in dst_srcs_dict:
+                srcs = set(dst_srcs_dict.pop(method))
+                for src in srcs:
+                    if src in src_dsts_dict:
+                        dsts: set = src_dsts_dict[src]
+                        dsts.discard(method)
+                        if len(dsts) == 0:
+                            src_dsts_dict.remove(src)
+                            buffer.append(src)
+                        else:
+                            src_dsts_dict[src] = dsts
+            if method in src_dsts_dict:
+                dsts = src_dsts_dict.pop(method)
+                logger.info(f"dsts size : {len(dsts)}")
+                for dst in dsts:
+                    buffer.append(dst)
+                    if dst in dst_srcs_dict:
+                        srcs: set = dst_srcs_dict[dst]
+                        srcs.discard(method)
+                        if len(srcs) == 0:
+                            dst_srcs_dict.pop(dst)
+                            buffer.append(dst)
+                        else:
+                            dst_srcs_dict[dst] = srcs
+            logger.info(f"buffer size : {len(buffer)}")
+            logger.info(f"to_remove_methods size : {len(to_remove_methods)}")
+            to_remove_methods.extend(buffer)
+        return to_remove_methods
+
 
     def slicing(self, to_remove_methods):
-        dst_srcs_dict = self.cg.sources
-        src_dsts_dict = self.cg.targets
+        dst_srcs_dict = self.cg.sources.copy()
+        src_dsts_dict = self.cg.targets.copy()
         buffer = to_remove_methods.copy()
         while len(buffer) > 0:
             method = buffer.pop()
             if method in dst_srcs_dict:
-                srcs = dst_srcs_dict[method]
+                srcs = set(dst_srcs_dict.pop(method))
                 for src in srcs:
                     if src in src_dsts_dict:
-                        dsts = src_dsts_dict[src]
+                        dsts: set = src_dsts_dict[src]
                         dsts.remove(method)
                         if len(dsts) == 0:
                             src_dsts_dict.pop(src)
                             buffer.append(src)
                         src_dsts_dict[src] = dsts
-                dst_srcs_dict.pop(method)
-            if method in src_dsts_dict:
-                dsts = src_dsts_dict[method]
-                for dst in dsts:
-                    if dst in dst_srcs_dict:
-                        srcs = dst_srcs_dict[dst]
-                        srcs.remove(method)
-                        if len(srcs) == 0:
-                            dst_srcs_dict.pop(dst)
-                            buffer.append(dst)
-                        dst_srcs_dict[dst] = srcs
-                src_dsts_dict.pop(method)
+            # if method in src_dsts_dict:
+            #     dsts = src_dsts_dict.pop(method)
+            #     for dst in dsts:
+            #         buffer.append(dst)
+                    # if dst in dst_srcs_dict:
+                    #     srcs: set = dst_srcs_dict[dst]
+                    #     srcs.remove(method)
+                    #     if len(srcs) == 0:
+                    #         dst_srcs_dict.pop(dst)
+                    #         buffer.append(dst)
+                    #     dst_srcs_dict[dst] = srcs
         to_remove_methods.extend(buffer)
         return to_remove_methods
