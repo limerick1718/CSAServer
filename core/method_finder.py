@@ -25,8 +25,7 @@ class MethodFinder:
             for method in intersection:
                 to_remove_methods.append(method)
             logger.info(f"permission_methods: {to_remove_methods}")
-        # to_remove_methods = self.forward_backward_joint_slicing(to_remove_methods)
-        to_remove_methods = self.backward_slicing(to_remove_methods)
+        to_remove_methods = self.slicing(to_remove_methods)
         return to_remove_methods, permissions
 
     def get_permission_acitivity_mapping(self):
@@ -157,43 +156,6 @@ class MethodFinder:
         to_remove_methods = self.filter_to_remove_methods(to_remove_methods)
         return to_remove_methods
     
-    def forward_backward_joint_slicing(self, to_remove_methods):
-        dst_srcs_dict = self.cg.sources.copy()
-        src_dsts_dict = self.cg.targets.copy()
-        buffer = to_remove_methods.copy()
-        while len(buffer) > 0:
-            logger.info(f"buffer size : {len(buffer)}")
-            method = buffer.pop()
-            if method in dst_srcs_dict:
-                srcs = set(dst_srcs_dict.pop(method))
-                for src in srcs:
-                    if src in src_dsts_dict:
-                        dsts: set = src_dsts_dict[src]
-                        dsts.discard(method)
-                        if len(dsts) == 0:
-                            src_dsts_dict.remove(src)
-                            buffer.append(src)
-                        else:
-                            src_dsts_dict[src] = dsts
-            if method in src_dsts_dict:
-                dsts = src_dsts_dict.pop(method)
-                logger.info(f"dsts size : {len(dsts)}")
-                for dst in dsts:
-                    buffer.append(dst)
-                    if dst in dst_srcs_dict:
-                        srcs: set = dst_srcs_dict[dst]
-                        srcs.discard(method)
-                        if len(srcs) == 0:
-                            dst_srcs_dict.pop(dst)
-                            buffer.append(dst)
-                        else:
-                            dst_srcs_dict[dst] = srcs
-            logger.info(f"buffer size : {len(buffer)}")
-            logger.info(f"to_remove_methods size : {len(to_remove_methods)}")
-            to_remove_methods.extend(buffer)
-        return to_remove_methods
-
-
     def slicing(self, to_remove_methods):
         dst_srcs_dict = self.cg.sources.copy()
         src_dsts_dict = self.cg.targets.copy()
@@ -205,21 +167,21 @@ class MethodFinder:
                 for src in srcs:
                     if src in src_dsts_dict:
                         dsts: set = src_dsts_dict[src]
-                        dsts.remove(method)
+                        dsts.discard(method)
                         if len(dsts) == 0:
                             src_dsts_dict.pop(src)
                             buffer.append(src)
                         src_dsts_dict[src] = dsts
-            # if method in src_dsts_dict:
-            #     dsts = src_dsts_dict.pop(method)
-            #     for dst in dsts:
-            #         buffer.append(dst)
-                    # if dst in dst_srcs_dict:
-                    #     srcs: set = dst_srcs_dict[dst]
-                    #     srcs.remove(method)
-                    #     if len(srcs) == 0:
-                    #         dst_srcs_dict.pop(dst)
-                    #         buffer.append(dst)
-                    #     dst_srcs_dict[dst] = srcs
+            if method in src_dsts_dict:
+                dsts = src_dsts_dict.pop(method)
+                for dst in dsts:
+                    buffer.append(dst)
+                    if dst in dst_srcs_dict:
+                        srcs: set = dst_srcs_dict[dst]
+                        srcs.discard(method)
+                        if len(srcs) == 0:
+                            dst_srcs_dict.pop(dst)
+                            buffer.append(dst)
+                        dst_srcs_dict[dst] = srcs
         to_remove_methods.extend(buffer)
         return to_remove_methods

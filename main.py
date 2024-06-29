@@ -128,11 +128,11 @@ async def debloat_permission(package_name: str, version_code: int, permissions: 
     logger.info(f"Debloat permission {permissions} for {apk_name}")
     permissions = permissions.split(",")
     cg = cg_container.get_cg(apk_name)
-    mf = MethodFinder(apk_name, cg, neeed_slicing=True)
+    mf = MethodFinder(apk_name, cg)
     to_remove_methods, to_remove_permissions = mf.set_to_remove_permission(permissions)
-    to_remove_methods = util.keep_package_only(to_remove_methods, [package_name])
-    all_methods = [method for method in mf.cg.methods if package_name in method]
-    logger.info(f"removed methods size: {len(to_remove_methods)} in all methods {len(all_methods)}")
+    # to_remove_methods = util.keep_package_only(to_remove_methods, [package_name])
+    # all_methods = [method for method in mf.cg.methods if package_name in method]
+    # logger.info(f"removed methods size: {len(to_remove_methods)} in all methods {len(all_methods)}")
     logger.debug(f"removed methods: {to_remove_methods}, removed permissions: {to_remove_permissions}")
     return {"to_remove_methods": to_remove_methods, "to_remove_permissions": to_remove_permissions}
 
