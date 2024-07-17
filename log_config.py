@@ -23,3 +23,8 @@ formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
 console.setFormatter(formatter)
 # add the handler to the root logger
 logging.getLogger('').addHandler(console)
+
+logger = logging.getLogger("Main")
+
+def start():
+    logger.info("Start logging")

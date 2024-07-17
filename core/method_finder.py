@@ -10,7 +10,7 @@ logger = logging.getLogger("MethodFinder")
 
 class MethodFinder:
     def __init__(self, apk_name: str, cg: CG, neeed_slicing: bool = False):
-        self.cg = cg
+        self.cg: CG = cg
         self.neeed_slicing = neeed_slicing
         self.apk_name = apk_name
 
@@ -45,6 +45,17 @@ class MethodFinder:
                     to_remove_permissions.append(permission)
             result_dict[activity] = to_remove_permissions
         return result_dict
+    
+    def get_used_permissions(self):
+        used_permissions = set()
+        all_methods = set(self.cg.methods)
+        permissions, _ = util.parse_manifest(self.apk_name)
+        for permission in permissions:
+                permission_methods = set(util.get_permission_api(permission))
+                intersection_remove = list(permission_methods & all_methods)
+                if len(intersection_remove) > 0:
+                    used_permissions.add(permission)
+        return used_permissions
 
     def set_to_remove_activity(self, activities: list, update_permission: bool = False):
         to_remove_methods = []
@@ -184,4 +195,25 @@ class MethodFinder:
                             buffer.append(dst)
                         dst_srcs_dict[dst] = srcs
         to_remove_methods.extend(buffer)
+        return to_remove_methods
+    
+    def app_method_slicing(self, to_remove_methods):
+        dst_srcs_dict = self.cg.sources
+        app_methods = self.cg.methods
+        processed = set()
+        buffer = to_remove_methods.copy()
+        processed.update(set(buffer))
+        while len(buffer) > 0:
+            method = buffer.pop()
+            if method in dst_srcs_dict:
+                srcs = set(dst_srcs_dict[method])
+                new_srcs = srcs.difference(processed)
+                sliced_app_methods = app_methods.intersection(new_srcs)
+                if len(sliced_app_methods) != 0:
+                    break
+                buffer.extend(new_srcs)
+                processed.update(set(new_srcs))
+                to_remove_methods.extend(new_srcs)
+        logger.info(f"to_remove_methods size : {len(to_remove_methods)}")
+        to_remove_methods = self.filter_to_remove_methods(to_remove_methods)
         return to_remove_methods

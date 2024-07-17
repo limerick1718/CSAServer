@@ -1,45 +1,43 @@
+import os
 import logging
-import time
 import uvicorn
 
-import os
+import log_config
 
-if not os.path.exists("log"):
-    os.makedirs("log")
-
-# time in yyyy-mm-dd-hh-mm-ss
-current_time = time.strftime("%Y-%m-%d-%H-%M-%S")
-# set up logging to file - see previous section for more details
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    datefmt='%m-%d %H:%M',
-                    filename=f"log/{current_time}.log",
-                    filemode='w')
-# define a Handler which writes INFO messages or higher to the sys.stderr
-console = logging.StreamHandler()
-console.setLevel(logging.INFO)
-# set a format which is simpler for console use
-formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
-# tell the handler to use this format
-console.setFormatter(formatter)
-# add the handler to the root logger
-logging.getLogger('').addHandler(console)
-
-import json
-
-import os
+from typing import Annotated
 
 import aiofiles
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI, UploadFile, Depends
+from fastapi.security import OAuth2PasswordBearer
 
 from core import const, util, cg_container
 from core.method_finder import MethodFinder
+
+from core.login import schemas
+from core.login import models
+import jwt
+from datetime import datetime 
+from core.login.models import User,TokenTable
+from core.login. database import Base, engine, SessionLocal
+from sqlalchemy.orm import Session
+from fastapi import FastAPI, Depends, HTTPException,status
+from fastapi.security import OAuth2PasswordBearer
+from core.login.auth_bearer import JWTBearer
+from functools import wraps
+from core.login.utils import create_access_token,create_refresh_token,verify_password,get_hashed_password
+
+ACCESS_TOKEN_EXPIRE_MINUTES = 30  # 30 minutes
+REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
+ALGORITHM = "HS256"
+JWT_SECRET_KEY = "narscbjim@$@&^@&%^&RFghgjvbdsha"   # should be kept secret
+JWT_REFRESH_SECRET_KEY = "13ugfdfgh@#$%^@&jkl45678902"
+
+log_config.start()
 
 logger = logging.getLogger("Main")
 
 # uvicorn main:app --host 0.0.0.0 --port 1992 --reload
 app = FastAPI()
-
 
 @app.get("/")
 async def root():
@@ -78,12 +76,13 @@ async def create_upload_file(file: UploadFile):
 # curl -F 'file=@/Users/jiakun/Downloads/org.woheller69.spritpreise_24.apk' http://101.32.239.114:1992/uploadfile
 # curl -F 'file=@/Users/jiakun/Downloads/apks/wikipedia.apk' http://localhost:1992/uploadfile
 
-
 @app.post("/get_permission")
 async def get_permission(package_name: str, version_code: int):
     apk_name = f"{package_name}-{version_code}"
-    permissions, _ = util.parse_manifest(apk_name)
-    return {"permissions": permissions}
+    cg = cg_container.get_cg(apk_name)
+    mf = MethodFinder(apk_name, cg)
+    used_permissions = mf.get_used_permissions()
+    return {"permissions": used_permissions}
 
 
 # curl -X POST http://101.32.239.114:1992/get_permission?package_name=org.woheller69.spritpreise&version_code=24
@@ -193,6 +192,109 @@ async def more(package_name: str, version_code: int, executed_methods: str):
     return {"to_remove_methods": result}
 # curl -X POST http://101.32.239.114:1992/more?package_name=org.woheller69.spritpreise&version_code=24&executed_methods=%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20org.woheller69.spritpreise.database.CityToWatch%20convertCityToWatched%28org.woheller69.spritpreise.database.City%29%3E%2C%3C%20org.woheller69.spritpreise.activities.AboutActivity%3A%20int%20getNavigationDrawerID%28%29%3E%2C%3C%20org.woheller69.spritpreise.activities.AboutActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onResume%28%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onDestroy%28%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20addCityToList%28org.woheller69.spritpreise.database.City%29%3E%2C%3C%20org.woheller69.spritpreise.activities.AboutActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20int%20getNavigationDrawerID%28%29%3E
 # curl -X POST http://localhost:1992/more?package_name=com.zhiliaoapp.musically&version_code=2022903010&executed_methods=%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20android.content.Intent%20getIntent()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20X.X6W%20getInflater()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onStart()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onDestroy()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onStop()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onResume()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onCreate(android.os.Bundle)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onSaveInstanceState(android.os.Bundle)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ(X.GcL)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onPause()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ(X.GcK)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ(X.GcL)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZJ(X.GcK)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20%3Cinit%3E()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ(boolean)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ(com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20boolean%20dJ_()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ(boolean)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onRestoreInstanceState(android.os.Bundle)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20finish()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LJII()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20boolean%20LIZ(android.content.Intent)%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20java.lang.String%20getBtmPageCode()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onPause()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onStop()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20%3Cinit%3E()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20android.content.Intent%20getIntent()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onDestroy()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onStart()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onResume()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onCreate(android.os.Bundle)%3E
+
+Base.metadata.create_all(engine)
+def get_session():
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+
+@app.post("/register")
+def register_user(user: schemas.UserCreate, session: Session = Depends(get_session)):
+    logger.info(f"begin register: {user.email}")
+    existing_user = session.query(models.User).filter_by(email=user.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    encrypted_password =get_hashed_password(user.password)
+    new_user = models.User(username=user.username, email=user.email, password=encrypted_password )
+    session.add(new_user)
+    session.commit()
+    session.refresh(new_user)
+    return {"message":"user created successfully"}
+
+@app.post('/login' ,response_model=schemas.TokenSchema)
+def login(request: schemas.requestdetails, db: Session = Depends(get_session)):
+    user = db.query(User).filter(User.email == request.email).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect email")
+    hashed_pass = user.password
+    if not verify_password(request.password, hashed_pass):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect password"
+        )
+    
+    access=create_access_token(user.id)
+    refresh = create_refresh_token(user.id)
+
+    token_db = models.TokenTable(user_id=user.id,  access_toke=access,  refresh_toke=refresh, status=True)
+    db.add(token_db)
+    db.commit()
+    db.refresh(token_db)
+    return {
+        "access_token": access,
+        "refresh_token": refresh,
+    }
+
+@app.get('/getusers')
+def getusers(session: Session = Depends(get_session)):
+    user = session.query(models.User).all()
+    return user
+
+@app.post('/change-password')
+def change_password(request: schemas.changepassword, db: Session = Depends(get_session)):
+    user = db.query(models.User).filter(models.User.email == request.email).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found")
+    
+    if not verify_password(request.old_password, user.password):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid old password")
+    
+    encrypted_password = get_hashed_password(request.new_password)
+    user.password = encrypted_password
+    db.commit()
+    
+    return {"message": "Password changed successfully"}
+
+@app.post('/logout')
+def logout(dependencies=Depends(JWTBearer()), db: Session = Depends(get_session)):
+    token=dependencies
+    payload = jwt.decode(token, JWT_SECRET_KEY, ALGORITHM)
+    user_id = payload['sub']
+    token_record = db.query(models.TokenTable).all()
+    info=[]
+    for record in token_record :
+        print("record",record)
+        if (datetime.utcnow() - record.created_date).days >1:
+            info.append(record.user_id)
+    if info:
+        existing_token = db.query(models.TokenTable).where(TokenTable.user_id.in_(info)).delete()
+        db.commit()
+    existing_token = db.query(models.TokenTable).filter(models.TokenTable.user_id == user_id, models.TokenTable.access_toke==token).first()
+    if existing_token:
+        existing_token.status=False
+        db.add(existing_token)
+        db.commit()
+        db.refresh(existing_token)
+    return {"message":"Logout Successfully"}
+
+# curl -v -X POST -H "Authorization: Bearer narscbjim@$@&^@&%^&RFghgjvbdsha" http://101.32.239.114:1992/logout
+# curl -v -X POST -H "Authorization: Bearer narscbjim@$@&^@&%^&RFghgjvbdsha" http://localhost:1992/logout
+
+def token_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        payload = jwt.decode(kwargs['dependencies'], JWT_SECRET_KEY, ALGORITHM)
+        user_id = payload['sub']
+        data= kwargs['session'].query(models.TokenTable).filter_by(user_id=user_id,access_toke=kwargs['dependencies'],status=True).first()
+        if data:
+            return func(kwargs['dependencies'],kwargs['session'])
+        else:
+            return {'msg': "Token blocked"}
+    return wrapper
 
 if __name__=="__main__":
     uvicorn.run(app, host="0.0.0.0", port=1992)

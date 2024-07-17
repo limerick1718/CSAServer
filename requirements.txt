@@ -13,3 +13,9 @@ pyarrow
 scipy==1.12
 httpx
 pytest
+sqlalchemy
+passlib
+python-jose
+PyJWT
+# to install psycopg2, may need: sudo apt-get install libpq-dev
+psycopg2
