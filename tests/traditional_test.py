@@ -9,7 +9,8 @@ def test_avaiblable():
     assert response.json() == {"message": "Hello World!!!!!"}
 
 def test_get_permission():
-    response = client.post("/get_permission?package_name=org.woheller69.spritpreise&version_code=24")
+    request = client.request(method="POST", url="/get_permission?package_name=org.woheller69.spritpreise&version_code=24", headers={"Content-Type": "application/json"})
+    response = client.send(request)
     assert response.status_code == 200
     assert response.json() == {"permissions":["android.permission.ACCESS_COARSE_LOCATION"]}
     response = client.post("/get_permission?package_name=com.zhiliaoapp.musically&version_code=2022903010")

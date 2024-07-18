@@ -3,6 +3,7 @@ import logging
 
 logger = logging.getLogger("CG")
 
+
 class CG:
     def __init__(self, apk_name: str):
         self.apk_name = apk_name
@@ -53,7 +54,3 @@ class CG:
             logger.debug(f"Classes in {self.apk_name} are {self.members.keys()}")
             return []
         return list(set(self.members[class_name]))
-
-
-
-

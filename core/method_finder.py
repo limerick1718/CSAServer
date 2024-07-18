@@ -45,16 +45,16 @@ class MethodFinder:
                     to_remove_permissions.append(permission)
             result_dict[activity] = to_remove_permissions
         return result_dict
-    
+
     def get_used_permissions(self):
         used_permissions = set()
         all_methods = set(self.cg.methods)
         permissions, _ = util.parse_manifest(self.apk_name)
         for permission in permissions:
-                permission_methods = set(util.get_permission_api(permission))
-                intersection_remove = list(permission_methods & all_methods)
-                if len(intersection_remove) > 0:
-                    used_permissions.add(permission)
+            permission_methods = set(util.get_permission_api(permission))
+            intersection_remove = list(permission_methods & all_methods)
+            if len(intersection_remove) > 0:
+                used_permissions.add(permission)
         return used_permissions
 
     def set_to_remove_activity(self, activities: list, update_permission: bool = False):
@@ -149,7 +149,7 @@ class MethodFinder:
                 buffer.extend(dsts)
                 to_remove_methods.extend(dsts)
         return to_remove_methods
-    
+
     def backward_slicing(self, to_remove_methods):
         dst_srcs_dict = self.cg.sources
         processed = set()
@@ -166,7 +166,7 @@ class MethodFinder:
         logger.info(f"to_remove_methods size : {len(to_remove_methods)}")
         to_remove_methods = self.filter_to_remove_methods(to_remove_methods)
         return to_remove_methods
-    
+
     def slicing(self, to_remove_methods):
         dst_srcs_dict = self.cg.sources.copy()
         src_dsts_dict = self.cg.targets.copy()
@@ -196,7 +196,7 @@ class MethodFinder:
                         dst_srcs_dict[dst] = srcs
         to_remove_methods.extend(buffer)
         return to_remove_methods
-    
+
     def app_method_slicing(self, to_remove_methods):
         dst_srcs_dict = self.cg.sources
         app_methods = self.cg.methods

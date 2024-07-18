@@ -17,10 +17,13 @@ def get_new_name(apk_name: str):
     output = subprocess.check_output(["sh", "apk_package.sh", apk_name]).decode("utf-8")
     return output.strip()
 
+
 def get_call_graph(apk_name: str):
     cg_path = const.get_cg_file(apk_name)
     if not os.path.exists(cg_path):
-        subprocess.Popen(["java", "-jar", "lib/ICCBot.jar", "-path", "apks/", "-name", apk_name + ".apk", "androidJar", "lib/platforms", "-time", "30", "-maxPathNumber", "100", "-client", "CallGraphClient", "-outputDir", "results/cg"])
+        subprocess.Popen(["java", "-jar", "lib/ICCBot.jar", "-path", "apks/", "-name", apk_name + ".apk", "androidJar",
+                          "lib/platforms", "-time", "30", "-maxPathNumber", "100", "-client", "CallGraphClient",
+                          "-outputDir", "results/cg"])
 
 
 def parse_permission_method(method: str):
@@ -31,6 +34,7 @@ def parse_permission_method(method: str):
     params = method.split("(")[1].split(")")[0]
     # <cf.playhi.freezeyou.MainApplication: void <clinit>()>
     return f"<{class_name}: {return_value} {method_name}({params})>"
+
 
 def read_permission_mappings():
     global permission_mappings
@@ -66,10 +70,12 @@ def read_permission_mappings():
                         logger.error(f"Error parsing line: {line}")
                         logger.error(e)
 
+
 def get_permission_api(permission: str):
     if len(permission_mappings) == 0:
         read_permission_mappings()
     return permission_mappings.get(permission, [])
+
 
 def parse_method_signature(method):
     # method = <de.blau.android.HelpViewer: void onConfigurationChanged(android.content.res.Configuration)>
@@ -89,6 +95,7 @@ def parse_method_signature(method):
         logger.error(f"Error parsing method: {method}")
         logger.error(e)
         return "", "", "", ""
+
 
 def is_skipped_package(method_name: str):
     class_name, _, _, _ = parse_method_signature(method_name)
@@ -111,6 +118,7 @@ def is_skipped_package(method_name: str):
         if class_name.startswith(temp_package_prefix):
             return True
     return False
+
 
 def parse_manifest(apk_name: str):
     manifest_path = const.get_manifest_file(apk_name)
@@ -140,6 +148,7 @@ def parse_manifest(apk_name: str):
                 continue
     return permissions, activities
 
+
 def load_similarity_file(apk_name: str, threshold: float):
     embedding_file = const.get_similarity_file(apk_name, threshold)
     index_file = const.get_index_file(apk_name)
@@ -151,6 +160,7 @@ def load_similarity_file(apk_name: str, threshold: float):
     with open(embedding_file, 'rb') as f:
         similarity_matrix = np.load(f)
     return similarity_matrix, indices
+
 
 def parse_method_signature_from_request(method: str):
     # <int com.google.android.material.color.MaterialColors.getColor(android.content.Context,int,int)> is in the format of <return_value class_name.method_name(parameters)>
@@ -165,6 +175,7 @@ def parse_method_signature_from_request(method: str):
     class_name = class_name_and_method_name.replace(f".{method_name}", "")
     return f"<{class_name}: {return_value} {method_name}({params})>"
 
+
 def extract_methods_from_requests(executed_methods_str: str):
     executed_methods_str = unquote(executed_methods_str.strip())
     executed_methods_str = executed_methods_str[1:-1]
@@ -172,6 +183,7 @@ def extract_methods_from_requests(executed_methods_str: str):
     methods = [f"<{method.strip()}>" for method in executed_methods]
     methods = [parse_method_signature_from_request(method) for method in methods]
     return methods
+
 
 def keep_package_only(to_remove_methods: list, packages: list):
     if "com.zhiliaoapp.musically" in packages:

@@ -4,17 +4,12 @@ from fastapi import FastAPI, Depends, HTTPException,status
 from fastapi import Request, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from core.login.models import TokenTable
-
-ACCESS_TOKEN_EXPIRE_MINUTES = 30  # 30 minutes
-REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
-ALGORITHM = "HS256"
-JWT_SECRET_KEY = "narscbjim@$@&^@&%^&RFghgjvbdsha"   # should be kept secret
-JWT_REFRESH_SECRET_KEY = "13ugfdfgh@#$%^@&jkl45678902"
+import config
 
 def decodeJWT(jwtoken: str):
     try:
         # Decode and verify the token
-        payload = jwt.decode(jwtoken, JWT_SECRET_KEY, ALGORITHM)
+        payload = jwt.decode(jwtoken, config.JWT_SECRET_KEY, config.ALGORITHM)
         return payload
     except InvalidTokenError:
         return None
