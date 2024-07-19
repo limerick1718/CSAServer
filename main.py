@@ -142,7 +142,7 @@ async def get_permission(package_name: str, version_code: int, token=Depends(JWT
                          db: Session = Depends(get_session)):
     apk_name = f"{package_name}-{version_code}"
     cg = cg_container.get_cg(apk_name)
-    mf = MethodFinder(apk_name, cg)
+    mf = MethodFinder(package_name, version_code, cg)
     used_permissions = mf.get_used_permissions()
     user_id = get_user_id_from_token(token)
     last_permissions = db.query(models.HisPermissionTable).filter(
@@ -168,7 +168,7 @@ async def debloat_permission(package_name: str, version_code: int, permissions: 
     db.refresh(permission_db)
     permissions = permissions.split(",")
     cg = cg_container.get_cg(apk_name)
-    mf = MethodFinder(apk_name, cg)
+    mf = MethodFinder(package_name, version_code, cg)
     to_remove_methods, to_remove_permissions = mf.set_to_remove_permission(permissions)
     # to_remove_methods = util.keep_package_only(to_remove_methods, [package_name])
     # all_methods = [method for method in mf.cg.methods if package_name in method]
@@ -220,7 +220,7 @@ async def debloat_activity(package_name: str, version_code: int, activity_names:
     db.refresh(activity_db)
     activity_names = activity_names.split(",")
     cg = cg_container.get_cg(apk_name)
-    mf = MethodFinder(apk_name, cg)
+    mf = MethodFinder(package_name, version_code, cg)
     to_remove_methods, to_remove_permissions = mf.set_to_remove_activity(activity_names)
     logger.debug(f"removed methods: {to_remove_methods}, removed permissions: {to_remove_permissions}")
     return {"to_remove_methods": to_remove_methods, "to_remove_permissions": to_remove_permissions}
@@ -249,7 +249,7 @@ async def keeponly(package_name: str, version_code: int, executed_methods: str, 
     logger.info(f"Keep only for {package_name} with {executed_methods}")
     apk_name = f"{package_name}-{version_code}"
     cg = cg_container.get_cg(apk_name)
-    mf = MethodFinder(apk_name, cg)
+    mf = MethodFinder(package_name, version_code, cg)
     executed_methods = util.extract_methods_from_requests(executed_methods)
     to_remove_methods = mf.keep_only(executed_methods)
     to_remove_methods = util.keep_package_only(to_remove_methods, [package_name])
@@ -264,7 +264,7 @@ async def keeponly(package_name: str, version_code: int, executed_methods: str, 
 def generalization(package_name: str, version_code: int, executed_methods: str, threshold: float):
     apk_name = f"{package_name}-{version_code}"
     cg = cg_container.get_cg(apk_name)
-    mf = MethodFinder(apk_name, cg)
+    mf = MethodFinder(package_name, version_code, cg)
     similarity_matrix, indices = util.load_similarity_file(apk_name, threshold)
     logger.info(f"Load similarity file for {apk_name} finish")
     if similarity_matrix is None:

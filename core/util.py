@@ -99,20 +99,20 @@ def parse_method_signature(method):
 
 def is_skipped_package(method_name: str):
     class_name, _, _, _ = parse_method_signature(method_name)
-    skipped_package_prefix = ["android",
-                              "androidx",
-                              "kotlin",
-                              "com.google",
-                              "soot",
-                              "junit",
-                              "java",
-                              "javax",
-                              "sun",
-                              "org.apache",
-                              "org.eclipse",
-                              "org.junit",
-                              "com.fasterxml",
-                              "com.android"
+    skipped_package_prefix = ["<android",
+                              "<androidx",
+                              "<kotlin",
+                              "<com.google",
+                              "<soot",
+                              "<junit",
+                              "<java",
+                              "<javax",
+                              "<sun",
+                              "<org.apache",
+                              "<org.eclipse",
+                              "<org.junit",
+                              "<com.fasterxml",
+                              "<com.android"
                               ]
     for temp_package_prefix in skipped_package_prefix:
         if class_name.startswith(temp_package_prefix):
@@ -185,20 +185,20 @@ def extract_methods_from_requests(executed_methods_str: str):
     return methods
 
 
-def keep_package_only(to_remove_methods: list, packages: list):
+def keep_package_only(methods: list, packages: list):
     if "com.zhiliaoapp.musically" in packages:
         packages.append("com.ss.")
         packages.append("com.bytedance.")
     packages = ["<" + package for package in packages]
     result = set()
-    logger.info(f"Number of to_remove_methods before filter package only : {len(to_remove_methods)}")
-    for method in to_remove_methods:
+    logger.info(f"Number of methods before filter package only : {len(methods)}")
+    for method in methods:
         is_package_method = False
         for package in packages:
             if method.startswith(package):
                 is_package_method = True
                 break
-        if is_package_method == True:
+        if is_package_method:
             result.add(method)
-    logger.info(f"Number of to_remove_methods AFTER filter package only : {len(result)}")
+    logger.info(f"Number of methods AFTER filter package only : {len(result)}")
     return list(result)

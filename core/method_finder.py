@@ -9,10 +9,11 @@ logger = logging.getLogger("MethodFinder")
 
 
 class MethodFinder:
-    def __init__(self, apk_name: str, cg: CG, neeed_slicing: bool = False):
+    def __init__(self, package_name, version_code, cg: CG, neeed_slicing: bool = False):
         self.cg: CG = cg
         self.neeed_slicing = neeed_slicing
-        self.apk_name = apk_name
+        self.apk_name = f"{package_name}-{version_code}"
+        self.package_name = package_name
 
     def set_to_remove_permission(self, permissions: list):
         logger.info(f"Debloat permission {permissions} for {self.apk_name}")
@@ -26,6 +27,7 @@ class MethodFinder:
                 to_remove_methods.append(method)
             logger.info(f"permission_methods: {to_remove_methods}")
         to_remove_methods = self.slicing(to_remove_methods)
+        # to_remove_methods = self.app_method_slicing(to_remove_methods)
         return to_remove_methods, permissions
 
     def get_permission_acitivity_mapping(self):
@@ -103,8 +105,8 @@ class MethodFinder:
     def filter_to_remove_methods(self, to_remove_methods: list):
         result = []
         for method in to_remove_methods:
-            if util.is_skipped_package(method):
-                continue
+            # if util.is_skipped_package(method):
+            #     continue
             if "<init>" in method or "<clinit>" in method:
                 continue
             # if android lifecycle method
@@ -167,6 +169,16 @@ class MethodFinder:
         to_remove_methods = self.filter_to_remove_methods(to_remove_methods)
         return to_remove_methods
 
+    def one_step_backward_slicing(self, to_remove_methods):
+        dst_srcs_dict = self.cg.sources
+        result = []
+        for method in to_remove_methods:
+            if method in dst_srcs_dict:
+                result.extend(dst_srcs_dict[method])
+        result.extend(to_remove_methods)
+        result = list(set(result))
+        return result
+
     def slicing(self, to_remove_methods):
         dst_srcs_dict = self.cg.sources.copy()
         src_dsts_dict = self.cg.targets.copy()
@@ -198,8 +210,8 @@ class MethodFinder:
         return to_remove_methods
 
     def app_method_slicing(self, to_remove_methods):
+        result = set()
         dst_srcs_dict = self.cg.sources
-        app_methods = self.cg.methods
         processed = set()
         buffer = to_remove_methods.copy()
         processed.update(set(buffer))
@@ -207,13 +219,18 @@ class MethodFinder:
             method = buffer.pop()
             if method in dst_srcs_dict:
                 srcs = set(dst_srcs_dict[method])
-                new_srcs = srcs.difference(processed)
-                sliced_app_methods = app_methods.intersection(new_srcs)
-                if len(sliced_app_methods) != 0:
-                    break
-                buffer.extend(new_srcs)
-                processed.update(set(new_srcs))
-                to_remove_methods.extend(new_srcs)
-        logger.info(f"to_remove_methods size : {len(to_remove_methods)}")
-        to_remove_methods = self.filter_to_remove_methods(to_remove_methods)
-        return to_remove_methods
+                sliced_app_methods = util.keep_package_only(list(srcs), [self.package_name])
+                result.update(sliced_app_methods)
+                if len(sliced_app_methods) > 0:
+                    print(f"method: {method}, sliced_app_methods: {sliced_app_methods}")
+                srcs.difference_update(sliced_app_methods)
+                srcs.difference_update(processed)
+                lib_only_srcs = [src for src in srcs if util.is_skipped_package(src)]
+                if len(lib_only_srcs) > 0:
+                    srcs = lib_only_srcs
+                buffer.extend(srcs)
+                processed.update(set(srcs))
+        logger.info(f"to_remove_methods size : {len(result)}")
+        result = util.keep_package_only(list(result), [self.package_name])
+        result = self.filter_to_remove_methods(list(result))
+        return list(result)
