@@ -29,7 +29,8 @@ def test_avaiblable():
 def test_check_upload():
     request = client.build_request(
         method="post",
-        url="/check_uploaded?package_name=cf.playhi.freezeyou&version_code=149",
+        url="/check_uploaded",
+        params={"package_name": "cf.playhi.freezeyou", "version_code": "149"},
         headers={"Authorization": f"Bearer {access_token}"}
     )
     response = client.send(request)
@@ -38,7 +39,8 @@ def test_check_upload():
 
     request = client.build_request(
         method="post",
-        url="/check_uploaded?package_name=cf.playhi.freezeyou&version_code=149"
+        url="/check_uploaded",
+        params={"package_name": "cf.playhi.freezeyou", "version_code": "149"},
     )
     response = client.send(request)
     result = response.json()
@@ -47,16 +49,18 @@ def test_check_upload():
 
 def test_get_permission():
     request = client.build_request(method="POST",
-                                   url="/get_permission?package_name=org.woheller69.spritpreise&version_code=24",
+                                   url="/get_permission",
+                                   params={"package_name": "org.woheller69.spritpreise", "version_code": "24"},
                                    headers={"Authorization": f"Bearer {access_token}"}
                                    )
     response = client.send(request)
     result = response.json()
     assert result['permissions'] == ["android.permission.ACCESS_COARSE_LOCATION"]
-    assert result['last_permissions'] == []
+    assert result['last_debloated_permissions'] == []
 
     request = client.build_request(method="POST",
-                                   url="/get_permission?package_name=com.zhiliaoapp.musically&version_code=2022903010",
+                                   url="/get_permission",
+                                   params={"package_name": "com.zhiliaoapp.musically", "version_code": "2022903010"},
                                    headers={"Authorization": f"Bearer {access_token}"}
                                    )
     response = client.send(request)
@@ -65,12 +69,13 @@ def test_get_permission():
                                           'android.permission.CAMERA', 'android.permission.WAKE_LOCK',
                                           'android.permission.WRITE_EXTERNAL_STORAGE',
                                           'android.permission.FOREGROUND_SERVICE', 'android.permission.INTERNET'}
-    assert result['last_permissions'] == []
+    assert result['last_debloated_permissions'] == []
 
 
 def test_debloat_permission():
     request = client.build_request(method="POST",
-                                   url="/debloat_permission?package_name=org.woheller69.spritpreise&version_code=24&permissions=android.permission.ACCESS_COARSE_LOCATION",
+                                   url="/debloat_permission",
+                                   params={"package_name": "org.woheller69.spritpreise", "version_code": "24", "permissions": "android.permission.ACCESS_COARSE_LOCATION"},
                                    headers={"Authorization": f"Bearer {access_token}"}
                                    )
     response = client.send(request)
@@ -79,7 +84,8 @@ def test_debloat_permission():
     assert set(response.json()["to_remove_permissions"]) == {"android.permission.ACCESS_COARSE_LOCATION"}
 
     request = client.build_request(method="POST",
-                                   url="/debloat_permission?package_name=com.zhiliaoapp.musically&version_code=2022903010&permissions=android.permission.SYSTEM_ALERT_WINDOW,android.permission.WAKE_LOCK,android.permission.FOREGROUND_SERVICE",
+                                   url="/debloat_permission",
+                                   params={"package_name": "com.zhiliaoapp.musically", "version_code": "2022903010", "permissions": "android.permission.SYSTEM_ALERT_WINDOW,android.permission.WAKE_LOCK,android.permission.FOREGROUND_SERVICE"},
                                    headers={"Authorization": f"Bearer {access_token}"}
                                    )
     response = client.send(request)
@@ -97,7 +103,8 @@ def test_debloat_permission():
 
 def test_get_permission_after_debloated():
     request = client.build_request(method="POST",
-                                   url="/get_permission?package_name=org.woheller69.spritpreise&version_code=24",
+                                   url="/get_permission",
+                                   params={"package_name": "org.woheller69.spritpreise", "version_code": "24"},
                                    headers={"Authorization": f"Bearer {access_token}"}
                                    )
     response = client.send(request)
@@ -106,7 +113,8 @@ def test_get_permission_after_debloated():
     assert result['last_debloated_permissions'] == ["android.permission.ACCESS_COARSE_LOCATION"]
 
     request = client.build_request(method="POST",
-                                   url="/get_permission?package_name=com.zhiliaoapp.musically&version_code=2022903010",
+                                   url="/get_permission",
+                                   params={"package_name": "com.zhiliaoapp.musically", "version_code": "2022903010"},
                                    headers={"Authorization": f"Bearer {access_token}"}
                                    )
     response = client.send(request)
@@ -122,7 +130,8 @@ def test_get_permission_after_debloated():
 
 def test_get_acitivities():
     request = client.build_request(method="POST",
-                                   url="/get_acitivities?package_name=org.woheller69.spritpreise&version_code=24",
+                                   url="/get_acitivities",
+                                   params={"package_name": "org.woheller69.spritpreise", "version_code": "24"},
                                    headers={"Authorization": f"Bearer {access_token}"}
                                    )
     response = client.send(request)
@@ -135,7 +144,8 @@ def test_get_acitivities():
                           "org.woheller69.spritpreise.activities.CityGasPricesActivity"}
     assert set(response.json()["last_debloated_activities"]) == set()
     request = client.build_request(method="POST",
-                                   url="/get_acitivities?package_name=org.wikipedia.alpha&version_code=50476",
+                                   url="/get_acitivities",
+                                   params={"package_name": "org.wikipedia.alpha", "version_code": "50476"},
                                    headers={"Authorization": f"Bearer {access_token}"}
                                    )
     response = client.send(request)
@@ -163,7 +173,8 @@ def test_get_acitivities():
                           "org.wikipedia.search.SearchActivity"}
     assert set(response.json()["last_debloated_activities"]) == set()
     request = client.build_request(method="POST",
-                                   url="/get_acitivities?package_name=com.amaze.filemanager&version_code=117",
+                                   url="/get_acitivities",
+                                   params={"package_name": "com.amaze.filemanager", "version_code": "117"},
                                    headers={"Authorization": f"Bearer {access_token}"}
                                    )
     response = client.send(request)
@@ -176,7 +187,8 @@ def test_get_acitivities():
                           "com.mikepenz.aboutlibraries.ui.LibsActivity"}
     assert set(response.json()["last_debloated_activities"]) == set()
     request = client.build_request(method="POST",
-                                   url="/get_acitivities?package_name=com.zhiliaoapp.musically&version_code=2022903010",
+                                   url="/get_acitivities",
+                                   params={"package_name": "com.zhiliaoapp.musically", "version_code": "2022903010"},
                                    headers={"Authorization": f"Bearer {access_token}"}
                                    )
     response = client.send(request)
@@ -228,13 +240,13 @@ def test_get_acitivities():
 
 def test_debloat_activity():
     request = client.build_request(method="POST",
-                                   url="/debloat_activity?package_name=org.woheller69.spritpreise&version_code=24&activity_names=org.woheller69.spritpreise.activities.ManageLocationsActivity,org.woheller69.spritpreise.activities.AboutActivity",
+                                   url="/debloat_activity",
+                                   params={"package_name": "org.woheller69.spritpreise", "version_code": "24", "activity_names": "org.woheller69.spritpreise.activities.ManageLocationsActivity,org.woheller69.spritpreise.activities.AboutActivity"},
                                    headers={"Authorization": f"Bearer {access_token}"}
                                    )
     response = client.send(request)
     assert response.status_code == 200
-    assert set(response.json()["to_remove_methods"]) == set(
-        ["<org.woheller69.spritpreise.activities.ManageLocationsActivity: void onDestroy()>",
+    assert set(response.json()["to_remove_methods"]) == {"<org.woheller69.spritpreise.activities.ManageLocationsActivity: void onDestroy()>",
          "<org.woheller69.spritpreise.activities.ManageLocationsActivity: void <init>()>",
          "<org.woheller69.spritpreise.activities.ManageLocationsActivity: void addCityToList(org.woheller69.spritpreise.database.City)>",
          "<org.woheller69.spritpreise.activities.ManageLocationsActivity: org.woheller69.spritpreise.database.CityToWatch convertCityToWatched(org.woheller69.spritpreise.database.City)>",
@@ -243,16 +255,16 @@ def test_debloat_activity():
          "<org.woheller69.spritpreise.activities.ManageLocationsActivity: int getNavigationDrawerID()>",
          "<org.woheller69.spritpreise.activities.AboutActivity: void onCreate(android.os.Bundle)>",
          "<org.woheller69.spritpreise.activities.AboutActivity: void <init>()>",
-         "<org.woheller69.spritpreise.activities.AboutActivity: int getNavigationDrawerID()>"])
+         "<org.woheller69.spritpreise.activities.AboutActivity: int getNavigationDrawerID()>"}
     assert set(response.json()["to_remove_permissions"]) == set()
     request = client.build_request(method="POST",
-                                   url="/debloat_activity?package_name=com.zhiliaoapp.musically&version_code=2022903010&activity_names=com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity,com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity",
+                                   url="/debloat_activity",
+                                   params={"package_name": "com.zhiliaoapp.musically", "version_code": "2022903010", "activity_names": "com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity,com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity"},
                                    headers={"Authorization": f"Bearer {access_token}"},
                                    )
     response = client.send(request)
     assert response.status_code == 200
-    assert set(response.json()["to_remove_methods"]) == set(
-        ["<com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity: void onResume()>",
+    assert set(response.json()["to_remove_methods"]) == {"<com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity: void onResume()>",
          "<com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity: void onPause()>",
          "<com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity: void onSaveInstanceState(android.os.Bundle)>",
          "<com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity: boolean dJ_()>",
@@ -282,13 +294,14 @@ def test_debloat_activity():
          "<com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity: void onDestroy()>",
          "<com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity: android.content.Intent getIntent()>",
          "<com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity: void onPause()>",
-         "<com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity: void onStop()>"])
+         "<com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity: void onStop()>"}
     assert set(response.json()["to_remove_permissions"]) == set()
 
 
 def test_get_acitivities_after_debloated():
     request = client.build_request(method="POST",
-                                   url="/get_acitivities?package_name=org.woheller69.spritpreise&version_code=24",
+                                   url="/get_acitivities",
+                                   params={"package_name": "org.woheller69.spritpreise", "version_code": "24"},
                                    headers={"Authorization": f"Bearer {access_token}"}
                                    )
     response = client.send(request)
@@ -303,7 +316,8 @@ def test_get_acitivities_after_debloated():
         "org.woheller69.spritpreise.activities.ManageLocationsActivity",
         "org.woheller69.spritpreise.activities.AboutActivity"}
     request = client.build_request(method="POST",
-                                   url="/get_acitivities?package_name=com.zhiliaoapp.musically&version_code=2022903010",
+                                   url="/get_acitivities",
+                                   params={"package_name": "com.zhiliaoapp.musically", "version_code": "2022903010"},
                                    headers={"Authorization": f"Bearer {access_token}"}
                                    )
     response = client.send(request)
