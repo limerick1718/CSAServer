@@ -36,3 +36,8 @@ def create_refresh_token(subject: Union[str, Any], expires_delta: int = None) ->
     to_encode = {"exp": expires_delta, "sub": str(subject)}
     encoded_jwt = jwt.encode(to_encode, config.JWT_REFRESH_SECRET_KEY, config.ALGORITHM)
     return encoded_jwt
+
+
+def get_user_id_from_token(token: str) -> str:
+    payload = jwt.decode(token, config.JWT_SECRET_KEY, config.ALGORITHM)
+    return payload.get("sub")

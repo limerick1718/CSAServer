@@ -1,10 +1,8 @@
 import logging
 import os
 from datetime import datetime
-from functools import wraps
 
 import aiofiles
-import jwt
 import uvicorn
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi import UploadFile
@@ -17,7 +15,8 @@ from core.login import schemas
 from core.login.auth_bearer import JWTBearer
 from core.login.database import Base, engine, SessionLocal
 from core.login.models import User, TokenTable
-from core.login.utils import create_access_token, create_refresh_token, verify_password, get_hashed_password
+from core.login.utils import create_access_token, create_refresh_token, verify_password, get_hashed_password, \
+    get_user_id_from_token
 from core.method_finder import MethodFinder
 
 config.start()
@@ -83,7 +82,7 @@ def login(request: schemas.requestdetails, db: Session = Depends(get_session)):
 
 
 @app.get('/getusers')
-def getusers(dependencies=Depends(JWTBearer()), session: Session = Depends(get_session)):
+def getusers(token=Depends(JWTBearer()), session: Session = Depends(get_session)):
     user = session.query(models.User).all()
     return user
 
@@ -107,7 +106,7 @@ def change_password(request: schemas.changepassword, db: Session = Depends(get_s
 
 
 @app.post("/check_uploaded")
-async def check_uploaded(package_name: str, version_code: int, dependencies=Depends(JWTBearer())):
+async def check_uploaded(package_name: str, version_code: int, token=Depends(JWTBearer())):
     apk_name = f"{package_name}-{version_code}"
     apk_file_path = f"{const.apk_dir}/{apk_name}.apk"
     if os.path.exists(apk_file_path):
@@ -122,7 +121,7 @@ async def check_uploaded(package_name: str, version_code: int, dependencies=Depe
 # curl -X POST http://localhost:1992/check_uploaded?package_name=cf.playhi.freezeyou&version_code=149
 
 @app.post("/uploadfile")
-async def create_upload_file(file: UploadFile, dependencies=Depends(JWTBearer())):
+async def create_upload_file(file: UploadFile, token=Depends(JWTBearer())):
     temp_out_file_path = f"{const.upload_temp_dir}/{file.filename}"
     async with aiofiles.open(temp_out_file_path, 'wb') as out_file:
         while content := await file.read(1024):  # async read chunk
@@ -139,54 +138,34 @@ async def create_upload_file(file: UploadFile, dependencies=Depends(JWTBearer())
 # curl -F 'file=@/Users/jiakun/Downloads/apks/wikipedia.apk' http://localhost:1992/uploadfile
 
 @app.post("/get_permission")
-async def get_permission(package_name: str, version_code: int, dependencies=Depends(JWTBearer())):
+async def get_permission(package_name: str, version_code: int, token=Depends(JWTBearer()),
+                         db: Session = Depends(get_session)):
     apk_name = f"{package_name}-{version_code}"
     cg = cg_container.get_cg(apk_name)
     mf = MethodFinder(apk_name, cg)
     used_permissions = mf.get_used_permissions()
-    return {"permissions": used_permissions}
+    user_id = get_user_id_from_token(token)
+    last_permissions = db.query(models.HisPermissionTable).filter(
+        models.HisPermissionTable.user_id == user_id, models.HisPermissionTable.package_name==package_name).order_by(models.HisPermissionTable.created_date.desc()).first()
+    if last_permissions:
+        last_permissions = last_permissions.permissions.split(",")
+        last_permissions = list(set(used_permissions) & set(last_permissions))
+    else:
+        last_permissions = []
+    return {"permissions": used_permissions, "last_debloated_permissions": last_permissions}
 
 
 # curl -X POST http://101.32.239.114:1992/get_permission?package_name=org.woheller69.spritpreise&version_code=24
 # curl -X POST http://101.32.239.114:1992/get_permission?package_name=com.zhiliaoapp.musically&version_code=2022903010
 
-@app.post("/get_acitivities")
-async def get_permission(package_name: str, version_code: int, dependencies=Depends(JWTBearer())):
-    apk_name = f"{package_name}-{version_code}"
-    _, activities = util.parse_manifest(apk_name)
-    logger.info(f"activities for {activities}")
-    screenshot_dir = f"results/screenshots/{apk_name}"
-    screenshot_files = [file.replace('.png', '') for file in os.listdir(screenshot_dir)]
-    logger.info(f"screenshot_files for {screenshot_files}")
-    intersection = list(set(activities) & set(screenshot_files))
-    # urls = [f"https://raw.githubusercontent.com/limerick1718/CSAServer/master/results/screenshots/{apk_name}/{activity}.png" for activity in intersection]
-    return {"activities": intersection}
-
-
-# curl -X POST http://101.32.239.114:1992/get_acitivities?package_name=org.woheller69.spritpreise&version_code=24
-# curl -X POST http://101.32.239.114:1992/get_acitivities?package_name=org.wikipedia.alpha&version_code=50476
-# curl -X POST http://101.32.239.114:1992/get_acitivities?package_name=com.amaze.filemanager&version_code=117
-# curl -X POST http://101.32.239.114:1992/get_acitivities?package_name=com.zhiliaoapp.musically&version_code=2022903010
-
-@app.post("/debloat_activity")
-async def debloat_activity(package_name: str, version_code: int, activity_names: str, dependencies=Depends(JWTBearer())):
-    apk_name = f"{package_name}-{version_code}"
-    logger.info(f"Debloat activity {activity_names} for {apk_name}")
-    activity_names = activity_names.split(",")
-    cg = cg_container.get_cg(apk_name)
-    mf = MethodFinder(apk_name, cg)
-    to_remove_methods, to_remove_permissions = mf.set_to_remove_activity(activity_names)
-    logger.debug(f"removed methods: {to_remove_methods}, removed permissions: {to_remove_permissions}")
-    return {"to_remove_methods": to_remove_methods, "to_remove_permissions": to_remove_permissions}
-
-
-# curl -X POST http://101.32.239.114:1992/debloat_activity?package_name=org.woheller69.spritpreise&version_code=24&activity_names=org.woheller69.spritpreise.activities.ManageLocationsActivity,org.woheller69.spritpreise.activities.AboutActivity
-# curl -X POST http://101.32.239.114:1992/debloat_activity?package_name=com.zhiliaoapp.musically&version_code=2022903010&activity_names=com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity,com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity
-
 @app.post("/debloat_permission")
-async def debloat_permission(package_name: str, version_code: int, permissions: str, dependencies=Depends(JWTBearer())):
+async def debloat_permission(package_name: str, version_code: int, permissions: str, token=Depends(JWTBearer()), db: Session = Depends(get_session)):
     apk_name = f"{package_name}-{version_code}"
     logger.info(f"Debloat permission {permissions} for {apk_name}")
+    permission_db = models.HisPermissionTable(user_id=get_user_id_from_token(token), package_name=package_name, app_version=str(version_code), permissions=permissions)
+    db.add(permission_db)
+    db.commit()
+    db.refresh(permission_db)
     permissions = permissions.split(",")
     cg = cg_container.get_cg(apk_name)
     mf = MethodFinder(apk_name, cg)
@@ -203,8 +182,70 @@ async def debloat_permission(package_name: str, version_code: int, permissions: 
 # curl -X POST http://101.32.239.114:1992/debloat_permission?package_name=com.zhiliaoapp.musically&version_code=2022903010&permissions=android.permission.ACCESS_FINE_LOCATION,android.permission.ACCESS_COARSE_LOCATION,android.permission.ACCESS_BACKGROUND_LOCATION
 
 
+@app.post("/get_acitivities")
+async def get_permission(package_name: str, version_code: int, token=Depends(JWTBearer()),
+                         db: Session = Depends(get_session)):
+    apk_name = f"{package_name}-{version_code}"
+    _, activities = util.parse_manifest(apk_name)
+    logger.info(f"activities for {activities}")
+    screenshot_dir = f"results/screenshots/{apk_name}"
+    screenshot_files = [file.replace('.png', '') for file in os.listdir(screenshot_dir)]
+    logger.info(f"screenshot_files for {screenshot_files}")
+    intersection = list(set(activities) & set(screenshot_files))
+    # urls = [f"https://raw.githubusercontent.com/limerick1718/CSAServer/master/results/screenshots/{apk_name}/{activity}.png" for activity in intersection]
+    user_id = get_user_id_from_token(token)
+    last_activities = db.query(models.HisActivityTable).filter(models.HisActivityTable.user_id == user_id, models.HisActivityTable.package_name==package_name).order_by(
+        models.HisActivityTable.created_date.desc()).first()
+    if last_activities:
+        last_activities = last_activities.activites.split(",")
+        last_activities = list(set(intersection) & set(last_activities))
+    else:
+        last_activities = []
+    return {"activities": intersection, "last_debloated_activities": last_activities}
+
+
+# curl -X POST http://101.32.239.114:1992/get_acitivities?package_name=org.woheller69.spritpreise&version_code=24
+# curl -X POST http://101.32.239.114:1992/get_acitivities?package_name=org.wikipedia.alpha&version_code=50476
+# curl -X POST http://101.32.239.114:1992/get_acitivities?package_name=com.amaze.filemanager&version_code=117
+# curl -X POST http://101.32.239.114:1992/get_acitivities?package_name=com.zhiliaoapp.musically&version_code=2022903010
+
+@app.post("/debloat_activity")
+async def debloat_activity(package_name: str, version_code: int, activity_names: str,
+                           token=Depends(JWTBearer()), db: Session = Depends(get_session)):
+    apk_name = f"{package_name}-{version_code}"
+    logger.info(f"Debloat activity {activity_names} for {apk_name}")
+    activity_db = models.HisActivityTable(user_id=get_user_id_from_token(token), package_name=package_name, app_version=str(version_code), activites=activity_names)
+    db.add(activity_db)
+    db.commit()
+    db.refresh(activity_db)
+    activity_names = activity_names.split(",")
+    cg = cg_container.get_cg(apk_name)
+    mf = MethodFinder(apk_name, cg)
+    to_remove_methods, to_remove_permissions = mf.set_to_remove_activity(activity_names)
+    logger.debug(f"removed methods: {to_remove_methods}, removed permissions: {to_remove_permissions}")
+    return {"to_remove_methods": to_remove_methods, "to_remove_permissions": to_remove_permissions}
+
+
+# curl -X POST http://101.32.239.114:1992/debloat_activity?package_name=org.woheller69.spritpreise&version_code=24&activity_names=org.woheller69.spritpreise.activities.ManageLocationsActivity,org.woheller69.spritpreise.activities.AboutActivity
+# curl -X POST http://101.32.239.114:1992/debloat_activity?package_name=com.zhiliaoapp.musically&version_code=2022903010&activity_names=com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity,com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity
+
+def save_executed_methods(package_name: str, version_code: int, executed_methods: str, token, db):
+    if len(executed_methods) == 0:
+    #     retrieve the newest executed methods from the database
+        executed_db = db.query(models.HisExecutedTable).filter(models.HisExecutedTable.user_id == get_user_id_from_token(token), models.HisExecutedTable.package_name == package_name).order_by(models.HisExecutedTable.created_date.desc()).first()
+        if executed_db:
+            executed_methods = executed_db.excuted_methods
+    else:
+        executed_db = models.HisExecutedTable(user_id=get_user_id_from_token(token), package_name=package_name, app_version=str(version_code), excuted_methods=executed_methods)
+        db.add(executed_db)
+        db.commit()
+        db.refresh(executed_db)
+    return executed_methods
+
+
 @app.post("/keeponly")
-async def keeponly(package_name: str, version_code: int, executed_methods: str, dependencies=Depends(JWTBearer())):
+async def keeponly(package_name: str, version_code: int, executed_methods: str, token=Depends(JWTBearer()), db: Session = Depends(get_session)):
+    executed_methods = save_executed_methods(package_name, version_code, executed_methods, token, db)
     logger.info(f"Keep only for {package_name} with {executed_methods}")
     apk_name = f"{package_name}-{version_code}"
     cg = cg_container.get_cg(apk_name)
@@ -241,7 +282,8 @@ def generalization(package_name: str, version_code: int, executed_methods: str, 
 
 
 @app.post("/similar")
-async def similar(package_name: str, version_code: int, executed_methods: str, dependencies=Depends(JWTBearer())):
+async def similar(package_name: str, version_code: int, executed_methods: str, token=Depends(JWTBearer()), db: Session = Depends(get_session)):
+    executed_methods = save_executed_methods(package_name, version_code, executed_methods, token, db)
     result = generalization(package_name, version_code, executed_methods, 0.7)
     return {"to_remove_methods": result}
 
@@ -250,7 +292,8 @@ async def similar(package_name: str, version_code: int, executed_methods: str, d
 # curl -X POST http://localhost:1992/similar?package_name=com.zhiliaoapp.musically&version_code=2022903010&executed_methods=%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20android.content.Intent%20getIntent%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20X.X6W%20getInflater%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onStart%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onDestroy%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onStop%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onResume%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onSaveInstanceState%28android.os.Bundle%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ%28X.GcL%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onPause%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ%28X.GcK%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ%28X.GcL%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZJ%28X.GcK%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ%28boolean%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ%28com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20boolean%20dJ_%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ%28boolean%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onRestoreInstanceState%28android.os.Bundle%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20finish%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LJII%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20boolean%20LIZ%28android.content.Intent%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20java.lang.String%20getBtmPageCode%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onPause%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onStop%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20android.content.Intent%20getIntent%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onDestroy%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onStart%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onResume%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E
 
 @app.post("/more")
-async def more(package_name: str, version_code: int, executed_methods: str, dependencies=Depends(JWTBearer())):
+async def more(package_name: str, version_code: int, executed_methods: str, token=Depends(JWTBearer()), db: Session = Depends(get_session)):
+    executed_methods = save_executed_methods(package_name, version_code, executed_methods, token, db)
     result = generalization(package_name, version_code, executed_methods, 0.9)
     return {"to_remove_methods": result}
 
@@ -259,10 +302,8 @@ async def more(package_name: str, version_code: int, executed_methods: str, depe
 # curl -X POST http://localhost:1992/more?package_name=com.zhiliaoapp.musically&version_code=2022903010&executed_methods=%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20android.content.Intent%20getIntent()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20X.X6W%20getInflater()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onStart()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onDestroy()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onStop()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onResume()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onCreate(android.os.Bundle)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onSaveInstanceState(android.os.Bundle)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ(X.GcL)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onPause()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ(X.GcK)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ(X.GcL)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZJ(X.GcK)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20%3Cinit%3E()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ(boolean)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ(com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20boolean%20dJ_()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ(boolean)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onRestoreInstanceState(android.os.Bundle)%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20finish()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LJII()%3E-%2C-%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20boolean%20LIZ(android.content.Intent)%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20java.lang.String%20getBtmPageCode()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onPause()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onStop()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20%3Cinit%3E()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20android.content.Intent%20getIntent()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onDestroy()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onStart()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onResume()%3E-%2C-%3Ccom.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onCreate(android.os.Bundle)%3E
 
 @app.post('/logout')
-def logout(dependencies=Depends(JWTBearer()), db: Session = Depends(get_session)):
-    token = dependencies
-    payload = jwt.decode(token, config.JWT_SECRET_KEY, config.ALGORITHM)
-    user_id = payload['sub']
+def logout(token=Depends(JWTBearer()), db: Session = Depends(get_session)):
+    user_id = get_user_id_from_token(token)
     token_record = db.query(models.TokenTable).all()
     info = []
     for record in token_record:
