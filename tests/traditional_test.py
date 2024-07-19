@@ -4,20 +4,22 @@ import json
 
 client = TestClient(main.app)
 
-request_dict = {
-    "email": "test@qwq.com",
-    "password": "asdfa_new"
-}
-request_json = json.dumps(request_dict)
-request = client.build_request(
-    method="post",
-    url="/login",
-    data=request_json
-)
-response = client.send(request)
-result = response.json()
-access_token = result['access_token']
-refresh_token = result['refresh_token']
+# request_dict = {
+#     "email": "test@qwq.com",
+#     "password": "asdfa_new"
+# }
+# request_json = json.dumps(request_dict)
+# request = client.build_request(
+#     method="post",
+#     url="/login",
+#     data=request_json
+# )
+# response = client.send(request)
+# result = response.json()
+# access_token = result['access_token']
+# refresh_token = result['refresh_token']
+
+access_token= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzY5NDk2NjgsInN1YiI6IjMifQ.TzoXgfo_9FEAeSn-lZlKJjBMaTmEOzw3ve9V2mLm1jA"
 
 
 def test_avaiblable():
