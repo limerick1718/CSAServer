@@ -19,7 +19,8 @@ client = TestClient(main.app)
 # access_token = result['access_token']
 # refresh_token = result['refresh_token']
 
-access_token= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzY5NDk2NjgsInN1YiI6IjMifQ.TzoXgfo_9FEAeSn-lZlKJjBMaTmEOzw3ve9V2mLm1jA"
+access_token= ""
+# access_token= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzY5NDk2NjgsInN1YiI6IjMifQ.TzoXgfo_9FEAeSn-lZlKJjBMaTmEOzw3ve9V2mLm1jA"
 
 
 def test_avaiblable():
@@ -129,8 +130,39 @@ def test_get_permission_after_debloated():
                                                          "android.permission.SYSTEM_ALERT_WINDOW",
                                                          "android.permission.FOREGROUND_SERVICE"}
 
+def test_get_activities_versions():
+    request = client.build_request(method="POST",
+                                   url="/get_acitivities",
+                                   params={"package_name": "org.woheller69.spritpreise", "version_code": "24"},
+                                   headers={"Authorization": f"Bearer {access_token}"}
+                                   )
+    response = client.send(request)
+    assert response.status_code == 200
+    actitivies = set(response.json()["activities"])
+    assert actitivies == {"org.woheller69.spritpreise.activities.AboutActivity",
+                          "org.woheller69.spritpreise.firststart.TutorialActivity",
+                          "org.woheller69.spritpreise.activities.ManageLocationsActivity",
+                          "org.woheller69.spritpreise.activities.SettingsActivity",
+                          "org.woheller69.spritpreise.activities.CityGasPricesActivity"}
+    # assert set(response.json()["last_debloated_activities"]) == set()
 
-def test_get_acitivities():
+    request = client.build_request(method="POST",
+                                   url="/get_acitivities",
+                                   params={"package_name": "org.woheller69.spritpreise", "version_code": "18"},
+                                   headers={"Authorization": f"Bearer {access_token}"}
+                                   )
+    response = client.send(request)
+    assert response.status_code == 200
+    actitivies = set(response.json()["activities"])
+    assert actitivies == {"org.woheller69.spritpreise.activities.AboutActivity",
+                          "org.woheller69.spritpreise.firststart.TutorialActivity",
+                          "org.woheller69.spritpreise.activities.ManageLocationsActivity",
+                          "org.woheller69.spritpreise.activities.SettingsActivity",
+                          "org.woheller69.spritpreise.activities.CityGasPricesActivity"}
+    # assert set(response.json()["last_debloated_activities"]) == set()
+
+
+def test_get_activities():
     request = client.build_request(method="POST",
                                    url="/get_acitivities",
                                    params={"package_name": "org.woheller69.spritpreise", "version_code": "24"},

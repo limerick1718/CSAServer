@@ -1,3 +1,4 @@
+import argparse
 import logging
 import os
 import pathlib
@@ -64,15 +65,15 @@ def calculate_similarity(apk_name: str):
         np.save(f, n9)
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("apk_name")
-    # args = parser.parse_args()
-    # apk_name = args.apk_name
-    # calculate_similarity(apk_name)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("apk_name")
+    args = parser.parse_args()
+    apk_name = args.apk_name
+    calculate_similarity(apk_name)
     # util.load_similarity_file(apk_name, 0.7)
-    for apk_name in os.listdir("apks"):
-        apk_name = apk_name[:-4]
-        calculate_similarity(apk_name)
+    # for apk_name in os.listdir("apks"):
+    #     apk_name = apk_name[:-4]
+    #     calculate_similarity(apk_name)
 
 # python similarity_cal.py com.zhiliaoapp.musically-2022903010
 # python similarity_cal.py org.woheller69.spritpreise-24
