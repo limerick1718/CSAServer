@@ -53,8 +53,8 @@ def test_check_upload():
 def test_get_permission():
     request = client.build_request(method="POST",
                                    url="/get_permission",
-                                   params={"package_name": "org.woheller69.spritpreise", "version_code": "24"},
-                                   headers={"Authorization": f"Bearer {access_token}"}
+                                   params={"package_name": "org.woheller69.spritpreise", "version_code": "24"}
+                                   # headers={"Authorization": f"Bearer {access_token}"}
                                    )
     response = client.send(request)
     result = response.json()

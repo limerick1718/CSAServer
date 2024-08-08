@@ -21,10 +21,11 @@ def get_new_name(apk_name: str):
 def get_call_graph(apk_name: str):
     cg_path = const.get_cg_file(apk_name)
     if not os.path.exists(cg_path):
+        print(f"java -jar lib/ICCBot.jar -path apks/ -name {apk_name}.apk androidJar lib/platforms -time 30 -maxPathNumber 100 -client MainClient -outputDir results/cg -noLibCode")
         subprocess.Popen(["java", "-jar", "lib/ICCBot.jar", "-path", "apks/", "-name", apk_name + ".apk", "androidJar",
-                          "lib/platforms", "-time", "30", "-maxPathNumber", "100", "-client", "CallGraphClient",
-                          "-outputDir", "results/cg"])
-
+                          "lib/platforms", "-time", "30", "-maxPathNumber", "100", "-client", "MainClient",
+                          "-outputDir", "results/cg", "-noLibCode"])
+# java -jar lib/ICCBot.jar -path apks/ -name org.wikipedia.dev-50496.apk androidJar lib/platforms -time 30 -maxPathNumber 100 -client MainClient -outputDir results/cg -noLibCode
 
 def parse_permission_method(method: str):
     # android.accounts.AccountManager.getAccounts()android.accounts.Account[]

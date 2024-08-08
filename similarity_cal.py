@@ -35,7 +35,7 @@ def process_node2vec(apk_name: str):
     cg_file = const.get_cg_file(apk_name)
     if not pathlib.Path(cg_file).exists():
         logger.info(f"CG file not found for {apk_name}")
-        os.system(f"java -jar lib/ICCBot.jar -path apks/ -name {apk_name}.apk androidJar lib/platforms -time 30 -maxPathNumber 100 -client CallGraphClient -outputDir results/cg")
+        os.system(f"java -jar lib/ICCBot.jar -path apks/ -name {apk_name}.apk androidJar lib/platforms -time 30 -maxPathNumber 100 -client MainClient -outputDir results/cg -noLibCode")
     print(f"pecanpy --input {cg_file} --output {embedding_file} --mode FirstOrderUnweighted --delimiter ' -> '")
     os.system(f"pecanpy --input {cg_file} --output {embedding_file} --mode FirstOrderUnweighted --delimiter ' -> '")
 
