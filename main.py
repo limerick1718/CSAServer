@@ -202,9 +202,9 @@ async def get_activities(package_name: str, version_code: int, token=Depends(JWT
     last_selected_activities_db_result = db.query(models.HisActivityTable).filter(
         models.HisActivityTable.user_id == user_id, models.HisActivityTable.package_name == package_name).order_by(
         models.HisActivityTable.created_date.desc()).first()
-    last_version = last_selected_activities_db_result.app_version
-    screenshots_last = get_activities_with_screenshots(f"{package_name}-{last_version}")
     if last_selected_activities_db_result:
+        last_version = last_selected_activities_db_result.app_version
+        screenshots_last = get_activities_with_screenshots(f"{package_name}-{last_version}")
         last_selected_activities = last_selected_activities_db_result.activites.split(",")
         last_selected_activities = list(set(screenshots_now) & set(last_selected_activities))
         new_added_activities = list(set(screenshots_now) - set(screenshots_last))
