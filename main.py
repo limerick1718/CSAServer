@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 import config
 from core import const, util, cg_container
+from core.ATG import ATG
 from core.login import models
 from core.login import schemas
 from core.login.auth_bearer import JWTBearer
@@ -184,28 +185,54 @@ async def debloat_permission(package_name: str, version_code: int, permissions: 
 # curl -X POST http://101.32.239.114:1992/debloat_permission?package_name=com.zhiliaoapp.musically&version_code=2022903010&permissions=android.permission.RECEIVE_BOOT_COMPLETED,com.android.vending.BILLING,android.permission.FOREGROUND_SERVICE
 # curl -X POST http://101.32.239.114:1992/debloat_permission?package_name=com.zhiliaoapp.musically&version_code=2022903010&permissions=android.permission.ACCESS_FINE_LOCATION,android.permission.ACCESS_COARSE_LOCATION,android.permission.ACCESS_BACKGROUND_LOCATION
 
+def get_activities_with_screenshots(app: str):
+    _, activities = util.parse_manifest(app)
+    screenshot_dir = f"results/screenshots/{app}"
+    screenshot_files = [file.replace('.png', '') for file in os.listdir(screenshot_dir)]
+    intersection = set(set(activities) & set(screenshot_files))
+    return intersection
+
 
 @app.post("/get_acitivities")
-async def get_permission(package_name: str, version_code: int, token=Depends(JWTBearer()),
+async def get_activities(package_name: str, version_code: int, token=Depends(JWTBearer()),
                          db: Session = Depends(get_session)):
     apk_name = f"{package_name}-{version_code}"
-    _, activities = util.parse_manifest(apk_name)
-    logger.info(f"activities for {activities}")
-    screenshot_dir = f"results/screenshots/{apk_name}"
-    screenshot_files = [file.replace('.png', '') for file in os.listdir(screenshot_dir)]
-    logger.info(f"screenshot_files for {screenshot_files}")
-    intersection = list(set(activities) & set(screenshot_files))
-    # urls = [f"https://raw.githubusercontent.com/limerick1718/CSAServer/master/results/screenshots/{apk_name}/{activity}.png" for activity in intersection]
+    screenshots_now = get_activities_with_screenshots(apk_name)
     user_id = get_user_id_from_token(token)
-    last_activities = db.query(models.HisActivityTable).filter(models.HisActivityTable.user_id == user_id,
-                                                               models.HisActivityTable.package_name == package_name).order_by(
+    last_selected_activities_db_result = db.query(models.HisActivityTable).filter(
+        models.HisActivityTable.user_id == user_id, models.HisActivityTable.package_name == package_name).order_by(
         models.HisActivityTable.created_date.desc()).first()
-    if last_activities:
-        last_activities = last_activities.activites.split(",")
-        last_activities = list(set(intersection) & set(last_activities))
+    last_version = last_selected_activities_db_result.app_version
+    screenshots_last = get_activities_with_screenshots(f"{package_name}-{last_version}")
+    if last_selected_activities_db_result:
+        last_selected_activities = last_selected_activities_db_result.activites.split(",")
+        last_selected_activities = list(set(screenshots_now) & set(last_selected_activities))
+        new_added_activities = list(set(screenshots_now) - set(screenshots_last))
+        if len(new_added_activities) == 0:
+            return {"activities": screenshots_now, "last_debloated_activities": last_selected_activities}
+        new_atg = ATG()
+        new_atg_result = new_atg.add_app_transitions(package_name, str(version_code))
+        old_atg = ATG()
+        old_atg_result = old_atg.add_app_transitions(package_name, str(last_version))
+        diff_atg = new_atg_result - old_atg_result
+        if len(diff_atg) == 0:
+            return {"activities": screenshots_now, "last_debloated_activities": last_selected_activities}
+        new_old_pair = {}
+        for transition in diff_atg:
+            left, right = transition.split(" -> ")
+            if right not in new_old_pair:
+                new_old_pair[right] = set()
+            new_old_pair[right].add(left)
+        for right in new_old_pair.keys():
+            if right in new_added_activities:
+                lefts = set(new_old_pair[right])
+                additional = set(set(lefts) - set(last_selected_activities))
+                if len(additional) == 0:
+                    last_selected_activities.append(right)
+        return {"activities": screenshots_now, "last_debloated_activities": last_selected_activities}
     else:
-        last_activities = []
-    return {"activities": intersection, "last_debloated_activities": last_activities}
+        last_selected_activities = []
+        return {"activities": screenshots_now, "last_debloated_activities": last_selected_activities}
 
 
 # curl -X POST http://101.32.239.114:1992/get_acitivities?package_name=org.woheller69.spritpreise&version_code=24
