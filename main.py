@@ -278,9 +278,7 @@ def save_executed_methods(package_name: str, version_code: int, executed_methods
         db.refresh(executed_db)
     return executed_methods
 
-
-@app.post("/keeponly")
-async def keeponly(package_name: str, version_code: int, executed_methods: str, token=Depends(JWTBearer()),
+def keep_executed_activities(package_name: str, version_code: int, executed_methods: str, token=Depends(JWTBearer()),
                    db: Session = Depends(get_session)):
     executed_methods = save_executed_methods(package_name, version_code, executed_methods, token, db)
     logger.info(f"Keep only for {package_name} with {executed_methods}")
@@ -288,10 +286,29 @@ async def keeponly(package_name: str, version_code: int, executed_methods: str, 
     cg = cg_container.get_cg(apk_name)
     mf = MethodFinder(package_name, version_code, cg)
     executed_methods = util.extract_methods_from_requests(executed_methods)
-    to_remove_methods = mf.keep_only(executed_methods)
+    to_remove_methods = mf.keep_activity_only(executed_methods)
+    # to_remove_methods = mf.keep_only(executed_methods)
     to_remove_methods = util.keep_package_only(to_remove_methods, [package_name])
     all_methods = [method for method in mf.cg.methods if package_name in method]
     logger.info(f"removed methods size: {len(to_remove_methods)} in all methods {len(all_methods)}")
+    return to_remove_methods
+
+
+@app.post("/keeponly")
+async def keeponly(package_name: str, version_code: int, executed_methods: str, token=Depends(JWTBearer()),
+                   db: Session = Depends(get_session)):
+    # executed_methods = save_executed_methods(package_name, version_code, executed_methods, token, db)
+    # logger.info(f"Keep only for {package_name} with {executed_methods}")
+    # apk_name = f"{package_name}-{version_code}"
+    # cg = cg_container.get_cg(apk_name)
+    # mf = MethodFinder(package_name, version_code, cg)
+    # executed_methods = util.extract_methods_from_requests(executed_methods)
+    # to_remove_methods = mf.keep_activity_only(executed_methods)
+    # # to_remove_methods = mf.keep_only(executed_methods)
+    # to_remove_methods = util.keep_package_only(to_remove_methods, [package_name])
+    # all_methods = [method for method in mf.cg.methods if package_name in method]
+    # logger.info(f"removed methods size: {len(to_remove_methods)} in all methods {len(all_methods)}")
+    to_remove_methods = keep_executed_activities(package_name, version_code, executed_methods, token, db)
     return {"to_remove_methods": to_remove_methods}
 
 
@@ -321,8 +338,9 @@ def generalization(package_name: str, version_code: int, executed_methods: str, 
 @app.post("/similar")
 async def similar(package_name: str, version_code: int, executed_methods: str, token=Depends(JWTBearer()),
                   db: Session = Depends(get_session)):
-    executed_methods = save_executed_methods(package_name, version_code, executed_methods, token, db)
-    result = generalization(package_name, version_code, executed_methods, 0.7)
+    # executed_methods = save_executed_methods(package_name, version_code, executed_methods, token, db)
+    # result = generalization(package_name, version_code, executed_methods, 0.7)
+    result = keep_executed_activities(package_name, version_code, executed_methods, token, db)
     return {"to_remove_methods": result}
 
 
@@ -332,8 +350,9 @@ async def similar(package_name: str, version_code: int, executed_methods: str, t
 @app.post("/more")
 async def more(package_name: str, version_code: int, executed_methods: str, token=Depends(JWTBearer()),
                db: Session = Depends(get_session)):
-    executed_methods = save_executed_methods(package_name, version_code, executed_methods, token, db)
-    result = generalization(package_name, version_code, executed_methods, 0.9)
+    # executed_methods = save_executed_methods(package_name, version_code, executed_methods, token, db)
+    # result = generalization(package_name, version_code, executed_methods, 0.9)
+    result = keep_executed_activities(package_name, version_code, executed_methods, token, db)
     return {"to_remove_methods": result}
 
 
