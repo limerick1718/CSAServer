@@ -197,7 +197,15 @@ def get_activities_with_screenshots(app: str):
 async def get_activities(package_name: str, version_code: int, token=Depends(JWTBearer()),
                          db: Session = Depends(get_session)):
     apk_name = f"{package_name}-{version_code}"
-    screenshots_now = get_activities_with_screenshots(apk_name)
+    screenshots = get_activities_with_screenshots(apk_name)
+    screenshots_now = []
+    if 'org.wikipedia.diff.ArticleEditDetailsActivity' in screenshots:
+        screenshots_now.append('org.wikipedia.diff.ArticleEditDetailsActivity')
+        screenshots.remove('org.wikipedia.diff.ArticleEditDetailsActivity')
+    if 'org.wikipedia.talk.template.TalkTemplatesActivity' in screenshots:
+        screenshots_now.append('org.wikipedia.talk.template.TalkTemplatesActivity')
+        screenshots.remove('org.wikipedia.talk.template.TalkTemplatesActivity')
+    screenshots_now.extend(screenshots)
     user_id = get_user_id_from_token(token)
     last_selected_activities_db_result = db.query(models.HisActivityTable).filter(
         models.HisActivityTable.user_id == user_id, models.HisActivityTable.package_name == package_name).order_by(
