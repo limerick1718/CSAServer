@@ -35,11 +35,11 @@ class MethodFinder:
         permissions, activities = util.parse_manifest(self.apk_name)
         for activity in activities:
             to_remove_permissions = []
-            logger.info(f"Debloat activity {activity} for {self.apk_name}")
+            # logger.info(f"Debloat activity {activity} for {self.apk_name}")
             members = self.cg.get_members(activity)
-            logger.info(f"activity_methods size: {len(members)}")
+            # logger.info(f"activity_methods size: {len(members)}")
             to_remove_methods = self.forward_slicing(members)
-            logger.info(f"toremove methods size: {len(to_remove_methods)}")
+            # logger.info(f"toremove methods size: {len(to_remove_methods)}")
             for permission in permissions:
                 permission_methods = set(util.get_permission_api(permission))
                 intersection_remove = list(permission_methods & set(to_remove_methods))
@@ -132,14 +132,14 @@ class MethodFinder:
             activity_methods = self.cg.get_members(activity)
             if len(set(activity_methods).intersection(executed_methods)) > 0:
                 non_executed_activities.remove(activity)
-                break
         logger.info(f"executed activities: {set(activities) - set(non_executed_activities)}")
         to_remove_methods = set()
         for activity in non_executed_activities:
             activity_methods = self.cg.get_members(activity)
             to_remove_methods.update(activity_methods)
         to_remove_methods = list(to_remove_methods)
-        result = self.filter_to_remove_methods(to_remove_methods)
+        result = to_remove_methods
+        # result = self.filter_to_remove_methods(to_remove_methods)
         return result
 
     def generalization(self, executed_methods: list, similarity_matrix, indices: list):
@@ -161,12 +161,16 @@ class MethodFinder:
 
     def forward_slicing(self, to_remove_methods):
         src_dsts_dict = self.cg.targets
+        processed = set()
         buffer = to_remove_methods.copy()
         while len(buffer) > 0:
             method = buffer.pop()
+            processed.add(method)
             if method in src_dsts_dict:
                 dsts = src_dsts_dict[method]
-                buffer.extend(dsts)
+                for dst in dsts:
+                    if dst not in processed:
+                        buffer.extend(dsts)
                 to_remove_methods.extend(dsts)
         return to_remove_methods
 
