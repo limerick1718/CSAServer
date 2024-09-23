@@ -17,47 +17,36 @@ class MethodFinder:
 
     def set_to_remove_permission(self, permissions: list):
         logger.info(f"Debloat permission {permissions} for {self.apk_name}")
-        to_remove_methods = []
+        permission_mapping_file = f"results/cg/{self.apk_name}/permission_methods.txt"
+        permission_dict = {}
+        with open(permission_mapping_file, "r") as file:
+            lines = file.readlines()
+            for line in lines:
+                permission = line.strip().split(":")[0]
+                method = line.replace(permission + ":", "").strip()
+                if permission not in permission_dict:
+                    permission_dict[permission] = set()
+                permission_dict[permission].add(method)
+        to_remove_methods = set()
         for permission in permissions:
-            logger.info(f"Debloat permission {permission} for {self.apk_name}")
-            permission_methods = set(util.get_permission_api(permission))
-            app_methods = set(self.cg.methods)
-            intersection = list(permission_methods & app_methods)
-            for method in intersection:
-                to_remove_methods.append(method)
-            logger.info(f"permission_methods: {to_remove_methods}")
-        to_remove_methods = self.slicing(to_remove_methods)
+            if permission in permission_dict:
+                to_remove_methods.update(permission_dict[permission])
+        # to_remove_methods = self.slicing(to_remove_methods)
         # to_remove_methods = self.app_method_slicing(to_remove_methods)
         return to_remove_methods, permissions
 
-    def get_permission_acitivity_mapping(self):
-        result_dict = {}
-        permissions, activities = util.parse_manifest(self.apk_name)
-        for activity in activities:
-            to_remove_permissions = []
-            # logger.info(f"Debloat activity {activity} for {self.apk_name}")
-            members = self.cg.get_members(activity)
-            # logger.info(f"activity_methods size: {len(members)}")
-            to_remove_methods = self.forward_slicing(members)
-            # logger.info(f"toremove methods size: {len(to_remove_methods)}")
-            for permission in permissions:
-                permission_methods = set(util.get_permission_api(permission))
-                intersection_remove = list(permission_methods & set(to_remove_methods))
-                if len(intersection_remove) > 0:
-                    to_remove_permissions.append(permission)
-            result_dict[activity] = to_remove_permissions
-        return result_dict
-
     def get_used_permissions(self):
-        used_permissions = set()
-        all_methods = set(self.cg.methods)
-        permissions, _ = util.parse_manifest(self.apk_name)
-        for permission in permissions:
-            permission_methods = set(util.get_permission_api(permission))
-            intersection_remove = list(permission_methods & all_methods)
-            if len(intersection_remove) > 0:
-                used_permissions.add(permission)
-        return used_permissions
+        permission_mapping_file = f"results/cg/{self.apk_name}/permission_methods.txt"
+        permission_dict = {}
+        with open(permission_mapping_file, "r") as file:
+            lines = file.readlines()
+            for line in lines:
+                permission = line.strip().split(":")[0]
+                method = line.replace(permission + ":", "").strip()
+                if permission not in permission_dict:
+                    permission_dict[permission] = set()
+                permission_dict[permission].add(method)
+        return permission_dict.keys()
 
     def set_to_remove_activity(self, activities: list, update_permission: bool = False):
         to_remove_methods = []

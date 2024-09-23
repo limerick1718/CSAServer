@@ -144,7 +144,7 @@ async def get_permission(package_name: str, version_code: int, token=Depends(JWT
     apk_name = f"{package_name}-{version_code}"
     cg = cg_container.get_cg(apk_name)
     mf = MethodFinder(package_name, version_code, cg)
-    used_permissions = mf.get_used_permissions()
+    used_permissions = set(mf.get_used_permissions())
     user_id = get_user_id_from_token(token)
     last_permissions = db.query(models.HisPermissionTable).filter(
         models.HisPermissionTable.user_id == user_id, models.HisPermissionTable.package_name == package_name).order_by(

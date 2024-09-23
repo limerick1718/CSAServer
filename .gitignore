@@ -392,3 +392,4 @@ apks/*
 results/*
 log/*
 .idea/*
+sootOutput/*
