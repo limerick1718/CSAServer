@@ -35,6 +35,18 @@ class MethodFinder:
         # to_remove_methods = self.app_method_slicing(to_remove_methods)
         return to_remove_methods, permissions
 
+    def set_to_remove_permission_old(self, permissions: list):
+        logger.info(f"Debloat permission {permissions} for {self.apk_name}")
+        to_remove_methods = []
+        for permission in permissions:
+            logger.info(f"Debloat permission {permission} for {self.apk_name}")
+            permission_methods = set(util.get_permission_api(permission))
+            to_remove_methods.extend(permission_methods)
+            logger.info(f"permission_methods: {to_remove_methods}")
+        # to_remove_methods = self.slicing(to_remove_methods)
+        # to_remove_methods = self.app_method_slicing(to_remove_methods)
+        return to_remove_methods, permissions
+
     def get_used_permissions(self):
         permission_mapping_file = f"results/cg/{self.apk_name}/permission_methods.txt"
         permission_dict = {}

@@ -68,9 +68,9 @@ public class Main {
         logger.info("Debloating finished.");
         long endTime = System.currentTimeMillis();
         System.out.println("Debloating time: " + (endTime - startTime) + "ms");
-        FileProcessor.write2File(toDebloatPath.replace("config.csv", "removed_methods.csv"),removedCounter);
-        FileProcessor.write2File(toDebloatPath.replace("config.csv", "total_methods.csv"),totalCounter);
-        FileProcessor.write2File(toDebloatPath.replace("config.csv", "time.txt"),(endTime - startTime));
+        FileProcessor.write2File(toDebloatPath + "removed_methods.csv",removedCounter);
+        FileProcessor.write2File(toDebloatPath + "total_methods.csv",totalCounter);
+        FileProcessor.write2File(toDebloatPath + "time.txt",(endTime - startTime));
     }
 
     public static void main(String[] args) {

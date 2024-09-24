@@ -25,8 +25,22 @@ public class MethodTransformer extends BodyTransformer {
         SootMethod method = body.getMethod();
         String methodSignature = method.getSignature();
         totalCounter.add(methodSignature);
-        if (toRemoveMethods.contains(methodSignature)) {
-            JimpleBody jimpleBody = (JimpleBody) body;
+        JimpleBody jimpleBody = (JimpleBody) body;
+        UnitPatchingChain tempUnits = jimpleBody.getUnits();
+        boolean needRemove = false;
+        for (Unit unit : tempUnits) {
+            if (unit instanceof Stmt) {
+                Stmt stmt = (Stmt) unit;
+                String stmtString = stmt.toString();
+                for (String toRemoveMethod : toRemoveMethods) {
+                    if (stmtString.contains(toRemoveMethod)) {
+                        needRemove = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (toRemoveMethods.contains(methodSignature) || needRemove) {
             UnitPatchingChain units = jimpleBody.getUnits();
             removedCounter.add(methodSignature);
             HashSet<Stmt> toRemoveStmts = new HashSet<>();
