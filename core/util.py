@@ -166,14 +166,18 @@ def load_similarity_file(apk_name: str, threshold: float):
 def parse_method_signature_from_request(method: str):
     # <int com.google.android.material.color.MaterialColors.getColor(android.content.Context,int,int)> is in the format of <return_value class_name.method_name(parameters)>
     # logger.info(f"parse_method_signature_from_request Method: {method}")
-    method = method.strip()
-    method = method[1:-2]
-    return_value = method.split(' ')[0]
-    method = method.split(' ')[1]
-    params = method.split('(')[1]
-    class_name_and_method_name = method.split('(')[0]
-    method_name = class_name_and_method_name.split('.')[-1]
-    class_name = class_name_and_method_name.replace(f".{method_name}", "")
+    try:
+        method = method.strip()
+        method = method[1:-2]
+        return_value = method.split(' ')[0]
+        method = method.split(' ')[1]
+        params = method.split('(')[1]
+        class_name_and_method_name = method.split('(')[0]
+        method_name = class_name_and_method_name.split('.')[-1]
+        class_name = class_name_and_method_name.replace(f".{method_name}", "")
+    except:
+        logger.error(f"Error parsing method: {method}")
+        return ""
     return f"<{class_name}: {return_value} {method_name}({params})>"
 
 

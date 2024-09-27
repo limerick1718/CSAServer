@@ -1,10 +1,11 @@
 import logging
 import os
 from datetime import datetime
+from typing import Annotated
 
 import aiofiles
 import uvicorn
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Body
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
@@ -317,7 +318,7 @@ def keep_executed_activities(package_name: str, version_code: int, executed_meth
 
 
 @app.post("/keeponly")
-async def keeponly(package_name: str, version_code: int, executed_methods: str, token=Depends(JWTBearer()),
+async def keeponly(package_name: str, version_code: int, executed_methods: Annotated[dict, Body()], token=Depends(JWTBearer()),
                    db: Session = Depends(get_session)):
     # executed_methods = save_executed_methods(package_name, version_code, executed_methods, token, db)
     # logger.info(f"Keep only for {package_name} with {executed_methods}")
@@ -330,6 +331,7 @@ async def keeponly(package_name: str, version_code: int, executed_methods: str, 
     # to_remove_methods = util.keep_package_only(to_remove_methods, [package_name])
     # all_methods = [method for method in mf.cg.methods if package_name in method]
     # logger.info(f"removed methods size: {len(to_remove_methods)} in all methods {len(all_methods)}")
+    executed_methods = executed_methods['executed_methods']
     to_remove_methods = keep_executed_activities(package_name, version_code, executed_methods, token, db)
     return {"to_remove_methods": to_remove_methods}
 
@@ -358,10 +360,11 @@ def generalization(package_name: str, version_code: int, executed_methods: str, 
 
 
 @app.post("/similar")
-async def similar(package_name: str, version_code: int, executed_methods: str, token=Depends(JWTBearer()),
+async def similar(package_name: str, version_code: int, executed_methods: Annotated[dict, Body()], token=Depends(JWTBearer()),
                   db: Session = Depends(get_session)):
     # executed_methods = save_executed_methods(package_name, version_code, executed_methods, token, db)
     # result = generalization(package_name, version_code, executed_methods, 0.7)
+    executed_methods = executed_methods['executed_methods']
     result = keep_executed_activities(package_name, version_code, executed_methods, token, db)
     return {"to_remove_methods": result}
 
@@ -370,10 +373,11 @@ async def similar(package_name: str, version_code: int, executed_methods: str, t
 # curl -X POST http://localhost:1992/similar?package_name=com.zhiliaoapp.musically&version_code=2022903010&executed_methods=%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20android.content.Intent%20getIntent%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20X.X6W%20getInflater%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onStart%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onDestroy%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onStop%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onResume%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onSaveInstanceState%28android.os.Bundle%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ%28X.GcL%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onPause%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ%28X.GcK%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ%28X.GcL%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZJ%28X.GcK%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ%28boolean%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ%28com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20boolean%20dJ_%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ%28boolean%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onRestoreInstanceState%28android.os.Bundle%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20finish%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LJII%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20boolean%20LIZ%28android.content.Intent%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20java.lang.String%20getBtmPageCode%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onPause%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onStop%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20android.content.Intent%20getIntent%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onDestroy%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onStart%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onResume%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E
 
 @app.post("/more")
-async def more(package_name: str, version_code: int, executed_methods: str, token=Depends(JWTBearer()),
+async def more(package_name: str, version_code: int, executed_methods: Annotated[dict, Body()], token=Depends(JWTBearer()),
                db: Session = Depends(get_session)):
     # executed_methods = save_executed_methods(package_name, version_code, executed_methods, token, db)
     # result = generalization(package_name, version_code, executed_methods, 0.9)
+    executed_methods = executed_methods['executed_methods']
     result = keep_executed_activities(package_name, version_code, executed_methods, token, db)
     return {"to_remove_methods": result}
 
