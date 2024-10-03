@@ -125,7 +125,7 @@ class MethodFinder:
         result = self.filter_to_remove_methods(to_remove_methods)
         return result
     
-    def keep_activity_only(self, executed_methods: list):
+    def keep_activity_only_old(self, executed_methods: list):
         executed_classes = set()
         executed_methods = set(executed_methods)
         class_methods_dict = self.cg.members
@@ -139,6 +139,28 @@ class MethodFinder:
                 to_remove_methods.update(methods)
         result = to_remove_methods - executed_methods
         logger.info(f"to_remove_methods: {result}")
+        return result
+
+    def keep_activity_only(self, executed_methods: list):
+        to_keep_methods = executed_methods.copy()
+        _, activities = util.parse_manifest(self.apk_name)
+        executed_activity = set()
+        activities = set(activities)
+        executed_methods = set(executed_methods)
+        for activity in activities:
+            activity_methods = self.cg.get_members(activity)
+            if len(set(activity_methods).intersection(executed_methods)) > 0:
+                executed_activity.add(activity)
+        logger.info(f"executed activities: {executed_activity}")
+        non_executed_activities = activities - executed_activity
+        logger.info(f"non-executed activities: {non_executed_activities}")
+        to_remove_methods = set()
+        for activity in non_executed_activities:
+            activity_methods = self.cg.get_members(activity)
+            to_remove_methods.update(activity_methods)
+        to_remove_methods = list(to_remove_methods)
+        result = to_remove_methods
+        result = self.filter_to_remove_methods(to_remove_methods)
         return result
 
     def generalization(self, executed_methods: list, similarity_matrix, indices: list):
