@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 
+from core import util
 from core import const
 
 logger = logging.getLogger("similarity_cal")
@@ -33,11 +34,15 @@ def process_node2vec(apk_name: str):
     if os.path.exists(embedding_file):
         return
     cg_file = const.get_cg_file(apk_name)
-    if not pathlib.Path(cg_file).exists():
-        logger.info(f"CG file not found for {apk_name}")
-        os.system(f"java -jar lib/ICCBot.jar -path apks/ -name {apk_name}.apk androidJar lib/platforms -time 30 -maxPathNumber 100 -client MainClient -outputDir results/cg -noLibCode")
-    print(f"pecanpy --input {cg_file} --output {embedding_file} --mode FirstOrderUnweighted --delimiter ' -> '")
-    os.system(f"pecanpy --input {cg_file} --output {embedding_file} --mode FirstOrderUnweighted --delimiter ' -> '")
+    if os.path.exists(cg_file) is False:
+        print(f"CG file not found for {apk_name}")
+        cg_cmd = f"java -jar lib/cg_extractor/target/cgextractor-1.0-SNAPSHOT-jar-with-dependencies.jar -apkPath apks/{apk_name}.apk -androidJar lib/platforms -resultDir results/cg/{apk_name}/CallGraphInfo"
+        # cg_cmd = f"java -jar lib/ICCBot.jar -path apks/ -name {apk_name}.apk androidJar lib/platforms -time 30 -maxPathNumber 100 -client MainClient -outputDir results/cg -noLibCode"
+        print(cg_cmd)
+        os.system(cg_cmd)
+    embedding_cmd = f"pecanpy --input {cg_file} --output {embedding_file} --mode FirstOrderUnweighted --delimiter ' -> '"
+    print(embedding_cmd)
+    os.system(embedding_cmd)
 
 def calculate_similarity(apk_name: str):
     process_node2vec(apk_name)
@@ -65,15 +70,38 @@ def calculate_similarity(apk_name: str):
         np.save(f, n9)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("apk_name")
-    args = parser.parse_args()
-    apk_name = args.apk_name
-    calculate_similarity(apk_name)
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("apk_name")
+    # args = parser.parse_args()
+    # apk_name = args.apk_name
+    # calculate_similarity(apk_name)
     # util.load_similarity_file(apk_name, 0.7)
-    # for apk_name in os.listdir("apks"):
-    #     apk_name = apk_name[:-4]
-    #     calculate_similarity(apk_name)
+    temp_uploaded_file_path = f"{const.upload_temp_dir}"
+    failed_apks = []
+    for apk_name in os.listdir(temp_uploaded_file_path):
+        print(apk_name)
+        try:
+            if not apk_name.endswith(".apk"):
+                continue
+            old_apk_path = os.path.join(temp_uploaded_file_path, apk_name)
+            print(f"processing {old_apk_path}")
+            new_name = util.get_new_name(old_apk_path)
+            new_apk_path = f"{const.apk_dir}/{new_name}.apk"
+            # copy the file to the apk directory
+            cmd = f"cp \"{old_apk_path}\" {new_apk_path}"
+            print(cmd)
+            os.system(cmd)
+            apk_name = new_name
+            calculate_similarity(apk_name)
+        except Exception as e:
+            logger.error(f"Failed to process {apk_name}")
+            failed_apks.append(apk_name)
+            logger.error(e)
+    if len(failed_apks) > 0:
+        print("**************************************************")
+        print(f"Failed to process {failed_apks}")
+        print("**************************************************")
+        logger.error(f"Failed to process {failed_apks}")
 
 # python similarity_cal.py com.zhiliaoapp.musically-2022903010
 # python similarity_cal.py org.woheller69.spritpreise-24

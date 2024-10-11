@@ -51,6 +51,6 @@ class CG:
 
     def get_members(self, class_name):
         if class_name not in self.members:
-            logger.debug(f"Classes in {self.apk_name} are {self.members.keys()}")
+            logger.debug(f"{class_name} not in {self.apk_name}. All classes are {self.members.keys()}")
             return []
         return list(set(self.members[class_name]))
