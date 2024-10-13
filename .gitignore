@@ -393,3 +393,5 @@ results/*
 log/*
 .idea/*
 sootOutput/*
+tests/results/*
+upload_temp/*

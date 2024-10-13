@@ -121,50 +121,32 @@ def is_skipped_package(method_name: str):
 
 
 def parse_manifest(apk_name: str):
-    manifest_path = const.get_manifest_file(apk_name)
-    permissions = []
-    activities = []
-    permission_flag = False
-    activity_flag = False
-    with open(manifest_path, "r") as f:
-        lines = f.readlines()
-        for line in lines:
-            line = line.strip()
-            if line.startswith("uses-permission"):
-                permission_flag = True
-                continue
-            if line.startswith("activity"):
-                activity_flag = True
-                continue
-            if permission_flag and line.startswith("- name: "):
-                permission_flag = False
-                permission = line.replace("- name: ", "").strip()
-                permissions.append(permission)
-                continue
-            if activity_flag and line.startswith("- name: "):
-                activity_flag = False
-                activity = line.replace("- name: ", "").strip()
-                activities.append(activity)
-                continue
-    return permissions, activities
-
-
-def get_declared_activities(apk_name: str):
     activities = set()
+    permissions = set()
     apk_path = f"{const.apk_dir}/{apk_name}.apk"
     cmd = f"aapt dump xmltree {apk_path} AndroidManifest.xml"
     lines = os.popen(cmd).read().split("\n")
     is_activity = False
+    is_permission = False
     for line in lines:
-        if "E: activity" in line:
-            is_activity = True
-        if is_activity and "A: android:name" in line:
-            # print(line)
-            activity = line.split('=\"')[1].split('\" (Raw:')[0]
-            # print(activity)
-            activities.add(activity)
-            is_activity = False
-    return activities
+        try:
+            if "E: activity" in line:
+                is_activity = True
+            if "E: uses-permission" in line:
+                is_permission = True
+            if "A: android:name" in line:
+                name = line.split('=\"')[1].split('\" (Raw:')[0]
+                if is_activity:
+                    activity = name
+                    activities.add(activity)
+                    is_activity = False
+                if is_permission:
+                    permission = name
+                    permissions.add(permission)
+                    is_permission = False
+        except:
+            print(f"Error while parse line: {line}")
+    return permissions, activities
 
 def load_similarity_file(apk_name: str, threshold: float):
     embedding_file = const.get_similarity_file(apk_name, threshold)

@@ -142,7 +142,7 @@ class MethodFinder:
         return result
 
     def keep_activity_only(self, executed_methods: list):
-        activities = util.get_declared_activities(self.apk_name)
+        _, activities = util.parse_manifest(self.apk_name)
         logger.info(f"declared activities: {activities}")
         executed_activity = set()
         activities = set(activities)
