@@ -9,6 +9,28 @@ import json
 short_full_mapping = json.load(open("lib/permission_mapping.json"))
 full_short_mapping = {v: k for k, v in short_full_mapping.items()}
 
+def get_exported_activities(apk_path):
+    activities = set()
+    cmd = f"aapt dump xmltree {apk_path} AndroidManifest.xml"
+    lines = os.popen(cmd).read().split("\n")
+    is_activity = False
+    activity_name = ""
+    for line in lines:
+        try:
+            if "E: activity" in line:
+                is_activity = True
+            if "A: android:name" in line:
+                name = line.split('=\"')[1].split('\" (Raw:')[0]
+                if is_activity:
+                    activity_name = name
+            if "A: android:exported" in line and "0xffffffff" in line and is_activity and activity_name!="":
+                activities.add(activity_name)
+                activity_name = ""
+                is_activity = False
+        except:
+            print(f"Error while parse line: {line}")
+    return activities
+
 def extract_mapping(apk_path):
     apk_name = apk_path.split("/")[-1].replace(".apk", "")
     output_path = f"results/cg/{apk_name}/permission_methods_temp.txt"
@@ -22,19 +44,42 @@ def extract_mapping(apk_path):
     cmd = f"java -jar lib/permission/target/permission-1.0-SNAPSHOT-jar-with-dependencies.jar -outputFile {output_path} -androidJar lib/platforms -apkPath {apk_path} -toDebloatPermissions {permission_string}"
     os.system(cmd)
 
-def post_process(apk_path):
+def post_process(apk_path, output_path):
     apk_name = apk_path.split("/")[-1].replace(".apk", "")
+    exported_activites = get_exported_activities(apk_path)
     input_path = f"results/cg/{apk_name}/permission_methods_temp.txt"
-    output_path = f"results/cg/{apk_name}/permission_methods.txt"
+    skipped_permissions = set()
+    with open(input_path, "r") as readFile:
+        lines = readFile.readlines()
+        for line in lines:
+            in_exported = False
+            short_permission = line.split(":")[0]
+            method = line.replace(short_permission + ":", "").strip()
+            for activity in exported_activites:
+                if activity in method:
+                    if "onCreate" in method or "onStart" in method or "onResume" in method or "onPause" in method or "onStop" in method or "onDestroy" in method or "<init>" in method or "<clinit>" in method:
+                        print(f"Skip {method} because it is in an exported activity {activity}")
+                        in_exported = True
+                        continue
+            if in_exported:
+                skipped_permissions.add(short_permission)
+    print(f"Skipped permissions: {skipped_permissions}")
+    with open(f"{output_path.replace('.txt', '_skipped_permissions.txt')}", "w") as write2file:
+        for permission in skipped_permissions:
+            write2file.write(f"{permission}\n")
     with open(output_path, "w") as write2file:
         with open(input_path, "r") as readFile:
             lines = readFile.readlines()
             for line in lines:
+                in_exported = False
                 short_permission = line.split(":")[0]
+                if short_permission in skipped_permissions:
+                    continue
                 method = line.replace(short_permission + ":", "").strip()
-                if short_permission in short_full_mapping:
-                    full_permission = short_full_mapping[short_permission]
-                    write2file.write(f"{full_permission}:{method}\n")
+                if not in_exported:
+                    if short_permission in short_full_mapping:
+                        full_permission = short_full_mapping[short_permission]
+                        write2file.write(f"{full_permission}:{method}\n")
 
 apks_dir = "apks"
 apks = os.listdir(apks_dir)
@@ -44,12 +89,12 @@ for apk in apks:
             apk_path = f"{apks_dir}/{apk}"
             apk_name = apk_path.split("/")[-1].replace(".apk", "")
             output_path = f"results/cg/{apk_name}/permission_methods.txt"
-            if os.path.exists(output_path):
-                print(f"{output_path} exist")
-                continue
+            # if os.path.exists(output_path):
+            #     print(f"{output_path} exist")
+            #     continue
             print(f"Processing {apk_name}")
             extract_mapping(apk_path)
-            post_process(apk_path)
+            post_process(apk_path, output_path)
     except:
         print(f"fail to process {apk}")
 

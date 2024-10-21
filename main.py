@@ -178,24 +178,6 @@ async def debloat_permission(package_name: str, version_code: int, permissions: 
     logger.debug(f"removed methods: {to_remove_methods}, removed permissions: {to_remove_permissions}")
     return {"to_remove_methods": to_remove_methods, "to_remove_permissions": to_remove_permissions}
 
-@app.post("/debloat_permission_old")
-async def debloat_permission(package_name: str, version_code: int, permissions: str, token=Depends(JWTBearer()),
-                             db: Session = Depends(get_session)):
-    apk_name = f"{package_name}-{version_code}"
-    logger.info(f"Debloat permission {permissions} for {apk_name}")
-    permission_db = models.HisPermissionTable(user_id=get_user_id_from_token(token), package_name=package_name,
-                                              app_version=str(version_code), permissions=permissions)
-    db.add(permission_db)
-    db.commit()
-    db.refresh(permission_db)
-    permissions = permissions.split(",")
-    cg = cg_container.get_cg(apk_name)
-    mf = MethodFinder(package_name, version_code, cg)
-    to_remove_methods, to_remove_permissions = mf.set_to_remove_permission_old(permissions)
-    logger.debug(f"removed methods: {to_remove_methods}, removed permissions: {to_remove_permissions}")
-    return {"to_remove_methods": to_remove_methods, "to_remove_permissions": to_remove_permissions}
-
-
 # curl -X POST http://101.32.239.114:1992/debloat_permission?package_name=org.woheller69.spritpreise&version_code=24&permissions=android.permission.ACCESS_FINE_LOCATION,android.permission.ACCESS_COARSE_LOCATION,android.permission.ACCESS_BACKGROUND_LOCATION
 # curl -X POST http://101.32.239.114:1992/debloat_permission?package_name=com.zhiliaoapp.musically&version_code=2022903010&permissions=android.permission.RECEIVE_BOOT_COMPLETED,com.android.vending.BILLING,android.permission.FOREGROUND_SERVICE
 # curl -X POST http://101.32.239.114:1992/debloat_permission?package_name=com.zhiliaoapp.musically&version_code=2022903010&permissions=android.permission.ACCESS_FINE_LOCATION,android.permission.ACCESS_COARSE_LOCATION,android.permission.ACCESS_BACKGROUND_LOCATION
