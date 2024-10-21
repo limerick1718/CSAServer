@@ -212,3 +212,18 @@ def keep_package_only(methods: list, packages: list):
             result.add(method)
     logger.info(f"Number of methods AFTER filter package only : {len(result)}")
     return list(result)
+
+
+def get_activities_with_mapping(apk_path: str):
+    apk_name = apk_path.split("/")[-1].replace(".apk", "")
+    activity_mapping_file = f"results/cg/{apk_name}/activity_methods_temp.txt"
+    activity_mapping = {}
+    with open(activity_mapping_file, "r") as f:
+        lines = f.readlines()
+        for line in lines:
+            activity = line.split(":")[0].strip()
+            if activity not in activity_mapping:
+                activity_mapping[activity] = set()
+            method = line[len(activity) + 1:].strip()
+            activity_mapping[activity].add(method)
+    return activity_mapping

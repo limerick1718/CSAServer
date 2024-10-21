@@ -184,6 +184,8 @@ async def debloat_permission(package_name: str, version_code: int, permissions: 
 
 def get_activities_with_screenshots(app: str):
     _, activities = util.parse_manifest(app)
+    declared_classes = util.get_activities_with_mapping(app)
+    activities = [activity for activity in activities if activity in declared_classes]
     screenshot_dir = f"results/screenshots/{app}"
     screenshot_files = [file.replace('.png', '') for file in os.listdir(screenshot_dir)]
     intersection = set(set(activities) & set(screenshot_files))

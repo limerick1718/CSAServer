@@ -10,9 +10,13 @@ cg_dict = {}
 
 def init():
     for apk_name in os.listdir("results/cg"):
-        apk_name = apk_name.replace(".apk", "")
-        cg_dict[apk_name] = CG(apk_name)
-        logger.info(f"Load cg for {apk_name}")
+        try:
+            apk_name = apk_name.replace(".apk", "")
+            cg_dict[apk_name] = CG(apk_name)
+            logger.info(f"Load cg for {apk_name}")
+        except Exception as e:
+            logger.error(f"Fail to load cg for {apk_name}: {e}")
+            pass
 
 
 def get_cg(apk_name: str):

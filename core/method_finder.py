@@ -51,25 +51,14 @@ class MethodFinder:
     def set_to_remove_activity(self, activities: list, update_permission: bool = False):
         to_remove_methods = []
         to_remove_permissions = []
+        activity_methods_mapping = util.get_activities_with_mapping(self.apk_name)
         for activity in activities:
             logger.info(f"Debloat activity {activity} for {self.apk_name}")
-            members = self.cg.get_members(activity)
-            logger.info(f"activity_methods: {members}")
-            to_remove_methods.extend(members)
-        if self.neeed_slicing:
-            to_remove_methods = self.slicing(to_remove_methods)
-        if update_permission:
-            permissions, activities = util.parse_manifest(self.apk_name)
-            to_keep_methods = list(set(self.cg.methods) - set(to_remove_methods))
-            for permission in permissions:
-                permission_methods = set(util.get_permission_api(permission))
-                intersection_remove = list(permission_methods & set(to_remove_methods))
-                intersection_keep = list(permission_methods & set(to_keep_methods))
-                if len(intersection_remove) > 0 and len(intersection_keep) == 0:
-                    to_remove_permissions.append(permission)
-        # currently, debloating activity looks good. We did not filter out activity lifecycle methods.
-        # If the result is not good, we can filter out activity lifecycle methods.
-        # to_remove_methods = self.filter_to_remove_methods(to_remove_methods)
+            if activity not in activity_methods_mapping:
+                continue
+            activity_methods = activity_methods_mapping[activity]
+            logger.info(f"activity_methods: {activity_methods}")
+            to_remove_methods.extend(activity_methods)
         return to_remove_methods, to_remove_permissions
 
     def find_proceed_methods(self, to_keep_methods: list):
