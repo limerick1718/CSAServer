@@ -132,8 +132,9 @@ class MethodFinder:
         non_executed_activities = activities - executed_activity
         logger.info(f"non-executed activities: {non_executed_activities}")
         to_remove_methods = set()
+        activity_methods_mapping = util.get_activities_with_mapping(self.apk_name)
         for activity in non_executed_activities:
-            activity_methods = self.cg.get_members(activity)
+            activity_methods = activity_methods_mapping.get(activity, set())
             to_remove_methods.update(activity_methods)
         to_remove_methods = to_remove_methods - executed_methods
         to_remove_methods = list(to_remove_methods)

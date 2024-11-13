@@ -11,6 +11,7 @@ def extract_mapping(apk_path):
     output_path = f"results/cg/{apk_name}/activity_methods_temp.txt"
     cmd = f"java -jar lib/activity/target/activity-1.0-SNAPSHOT-jar-with-dependencies.jar -outputFile {output_path} -androidJar lib/platforms -apkPath {apk_path}"
     os.system(cmd)
+
 apks_dir = "apks"
 apks = os.listdir(apks_dir)
 for apk in apks:
@@ -18,7 +19,7 @@ for apk in apks:
         if apk.endswith(".apk") and apk != "com.zhiliaoapp.musically-2022903010.apk":
             apk_path = f"{apks_dir}/{apk}"
             apk_name = apk_path.split("/")[-1].replace(".apk", "")
-            output_path = f"results/cg/{apk_name}/activity_methods.txt"
+            output_path = f"results/cg/{apk_name}/activity_methods_temp.txt"
             if os.path.exists(output_path):
                 print(f"{output_path} exist")
                 continue
