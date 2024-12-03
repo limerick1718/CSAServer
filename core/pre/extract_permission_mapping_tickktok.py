@@ -34,8 +34,8 @@ def get_exported_activities(apk_path):
 
 
 def extract_mapping(apk_path, output_path):
-    # if os.path.exists(output_path):
-    #     return
+    if os.path.exists(output_path):
+        return
     apk_name = apk_path.split("/")[-1].replace(".apk", "")
     permissions, _ = util.parse_manifest(apk_name)
     permission_string = ""
@@ -94,8 +94,8 @@ for apk in apks:
             print(f"Processing {apk_name}")
             raw_mapping_output_path = f"results/cg/{apk_name}/permission_methods_temp.txt"
             extract_mapping(apk_path, raw_mapping_output_path)
-            # output_path = f"results/cg/{apk_name}/permission_methods.txt"
-            # post_process(apk_path, raw_mapping_output_path, output_path)
+            output_path = f"results/cg/{apk_name}/permission_methods.txt"
+            post_process(apk_path, raw_mapping_output_path, output_path)
     except:
         print(f"fail to process {apk}")
 

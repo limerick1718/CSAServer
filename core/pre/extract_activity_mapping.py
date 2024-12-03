@@ -16,7 +16,7 @@ apks_dir = "apks"
 apks = os.listdir(apks_dir)
 for apk in apks:
     try:
-        if apk.endswith(".apk") and apk != "com.zhiliaoapp.musically-2022903010.apk":
+        if apk.endswith(".apk"):
             apk_path = f"{apks_dir}/{apk}"
             apk_name = apk_path.split("/")[-1].replace(".apk", "")
             output_path = f"results/cg/{apk_name}/activity_methods_temp.txt"
