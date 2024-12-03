@@ -395,3 +395,4 @@ log/*
 sootOutput/*
 tests/results/*
 upload_temp/*
+db-data/*

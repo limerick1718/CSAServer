@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 # Replace the SQLite connection URL with your PostgresQL connection URL
-DATABASE_URL = "postgresql://jkliu:ATM17ljk$$@localhost:5432/csa"
+DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/postgres"
 # Create a PostgreSQL engine instance
 engine = create_engine(DATABASE_URL)
 # Create declarative base meta instance

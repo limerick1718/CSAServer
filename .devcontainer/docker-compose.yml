@@ -1,0 +1,25 @@
+services:
+  # Update this to the name of the service you want to work with in your docker-compose.yml file
+  web:
+#    build:
+#      context: .
+#      dockerfile: .devcontainer/Dockerfile
+    image: csaserver
+    container_name: csa-web
+    ports:
+      - 1992:1992
+    volumes:
+      - ..:/workspaces
+    depends_on:
+      - db
+  db:
+    image: postgres
+    container_name: csa-db
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - ../db-data:/var/lib/postgresql/data
