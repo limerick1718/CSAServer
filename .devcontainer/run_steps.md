@@ -20,3 +20,11 @@ run application
 ```bash
 docker run -it --rm --name csaserver -p 1992:1992 --network host -v .:/app -w /app csaserver bash start.sh
 ```
+
+```bash
+docker run --name csaserver -d -p 1992:1992 --network host -v .:/app -w /app csaserver bash start.sh
+```
+
+docker run -it --rm -v .:/config -w /config androidsdk/android-30:latest bash
+
+pip3 install -r requirements.txt --upgrade-strategy only-if-needed

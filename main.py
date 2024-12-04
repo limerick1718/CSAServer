@@ -10,7 +10,7 @@ from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
 import config
-from core import const, util, cg_container
+from core import const, util
 from core.ATG import ATG
 from core.login import models
 from core.login import schemas
@@ -143,8 +143,7 @@ async def create_upload_file(file: UploadFile, token=Depends(JWTBearer())):
 async def get_permission(package_name: str, version_code: int, token=Depends(JWTBearer()),
                          db: Session = Depends(get_session)):
     apk_name = f"{package_name}-{version_code}"
-    cg = cg_container.get_cg(apk_name)
-    mf = MethodFinder(package_name, version_code, cg)
+    mf = MethodFinder(package_name, version_code)
     used_permissions = set(mf.get_used_permissions())
     user_id = get_user_id_from_token(token)
     last_permissions = db.query(models.HisPermissionTable).filter(
@@ -158,7 +157,7 @@ async def get_permission(package_name: str, version_code: int, token=Depends(JWT
     return {"permissions": used_permissions, "last_debloated_permissions": last_permissions}
 
 
-# curl -X POST http://101.32.239.114:1992/get_permission?package_name=org.woheller69.spritpreise&version_code=24
+# curl -X POST http://localhost:1992/get_permission?package_name=org.woheller69.spritpreise&version_code=24
 # curl -X POST http://101.32.239.114:1992/get_permission?package_name=com.zhiliaoapp.musically&version_code=2022903010
 
 @app.post("/debloat_permission")
@@ -172,8 +171,7 @@ async def debloat_permission(package_name: str, version_code: int, permissions: 
     db.commit()
     db.refresh(permission_db)
     permissions = permissions.split(",")
-    cg = cg_container.get_cg(apk_name)
-    mf = MethodFinder(package_name, version_code, cg)
+    mf = MethodFinder(package_name, version_code)
     to_remove_methods, to_remove_permissions = mf.set_to_remove_permission(permissions)
     logger.debug(f"removed methods: {to_remove_methods}, removed permissions: {to_remove_permissions}")
     return {"to_remove_methods": to_remove_methods, "to_remove_permissions": to_remove_permissions}
@@ -258,8 +256,7 @@ async def debloat_activity(package_name: str, version_code: int, activity_names:
     db.commit()
     db.refresh(activity_db)
     activity_names = activity_names.split(",")
-    cg = cg_container.get_cg(apk_name)
-    mf = MethodFinder(package_name, version_code, cg)
+    mf = MethodFinder(package_name, version_code)
     to_remove_methods, to_remove_permissions = mf.set_to_remove_activity(activity_names)
     logger.debug(f"removed methods: {to_remove_methods}, removed permissions: {to_remove_permissions}")
     return {"to_remove_methods": to_remove_methods, "to_remove_permissions": to_remove_permissions}
@@ -289,8 +286,7 @@ def keep_executed_activities(package_name: str, version_code: int, extracted_exe
                    db: Session = Depends(get_session)):
     loaded_executed_methods = save_executed_methods(package_name, version_code, extracted_executed_methods, token, db)
     apk_name = f"{package_name}-{version_code}"
-    cg = cg_container.get_cg(apk_name)
-    mf = MethodFinder(package_name, version_code, cg)
+    mf = MethodFinder(package_name, version_code)
     extracted_executed_methods = util.extract_methods_from_requests(loaded_executed_methods)
     logger.info(f"keep_executed_activities for {package_name} with {extracted_executed_methods}")
     to_remove_methods = mf.keep_activity_only(extracted_executed_methods)
@@ -307,8 +303,7 @@ async def keeponly(package_name: str, version_code: int, executed_methods: Annot
     # executed_methods = save_executed_methods(package_name, version_code, executed_methods, token, db)
     # logger.info(f"Keep only for {package_name} with {executed_methods}")
     # apk_name = f"{package_name}-{version_code}"
-    # cg = cg_container.get_cg(apk_name)
-    # mf = MethodFinder(package_name, version_code, cg)
+    # mf = MethodFinder(package_name, version_code)
     # executed_methods = util.extract_methods_from_requests(executed_methods)
     # to_remove_methods = mf.keep_activity_only(executed_methods)
     # # to_remove_methods = mf.keep_only(executed_methods)
@@ -318,30 +313,6 @@ async def keeponly(package_name: str, version_code: int, executed_methods: Annot
     executed_methods = executed_methods['executed_methods']
     to_remove_methods = keep_executed_activities(package_name, version_code, executed_methods, token, db)
     return {"to_remove_methods": to_remove_methods}
-
-
-# curl -X POST http://101.32.239.114:1992/keeponly?package_name=org.woheller69.spritpreise&version_code=24&&executed_methods=%3Corg.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20org.woheller69.spritpreise.database.CityToWatch%20convertCityToWatched%28org.woheller69.spritpreise.database.City%29%3E%2C%3C%20org.woheller69.spritpreise.activities.AboutActivity%3A%20int%20getNavigationDrawerID%28%29%3E%2C%3C%20org.woheller69.spritpreise.activities.AboutActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onResume%28%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20onDestroy%28%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20addCityToList%28org.woheller69.spritpreise.database.City%29%3E%2C%3C%20org.woheller69.spritpreise.activities.AboutActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3C%20org.woheller69.spritpreise.activities.ManageLocationsActivity%3A%20int%20getNavigationDrawerID%28%29%3E
-# curl -X POST http://101.32.239.114:1992/keeponly?package_name=com.zhiliaoapp.musically&version_code=2022903010&executed_methods=%3Ccom.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20android.content.Intent%20getIntent%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20X.X6W%20getInflater%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onStart%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onDestroy%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onStop%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onResume%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onSaveInstanceState%28android.os.Bundle%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ%28X.GcL%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onPause%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ%28X.GcK%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ%28X.GcL%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZJ%28X.GcK%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ%28boolean%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZ%28com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20boolean%20dJ_%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LIZIZ%28boolean%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20onRestoreInstanceState%28android.os.Bundle%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20finish%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20void%20LJII%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.shortvideo.ui.VideoRecordNewActivity%3A%20boolean%20LIZ%28android.content.Intent%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20java.lang.String%20getBtmPageCode%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onPause%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onStop%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20%3Cinit%3E%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20android.content.Intent%20getIntent%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onDestroy%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onStart%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onResume%28%29%3E%2C%3C%20com.ss.android.ugc.aweme.ecommerce.showcase.store.StoreActivity%3A%20void%20onCreate%28android.os.Bundle%29%3E
-
-def generalization(package_name: str, version_code: int, executed_methods: str, threshold: float):
-    apk_name = f"{package_name}-{version_code}"
-    cg = cg_container.get_cg(apk_name)
-    mf = MethodFinder(package_name, version_code, cg)
-    similarity_matrix, indices = util.load_similarity_file(apk_name, threshold)
-    logger.info(f"Load similarity file for {apk_name} finish")
-    if similarity_matrix is None:
-        return {"to_remove_methods": "Similarity not ready"}
-    executed_methods = util.extract_methods_from_requests(executed_methods)
-    logger.info(f"Generalization for {apk_name} with {executed_methods} using threshold {threshold}")
-    to_remove_methods = mf.generalization(executed_methods, similarity_matrix, indices)
-    to_remove_methods = util.keep_package_only(to_remove_methods, [package_name])
-    all_methods = [method for method in mf.cg.methods if package_name in method]
-    logger.info(f"removed methods size: {len(to_remove_methods)} in all methods {len(all_methods)}")
-    # result_dict = {}
-    # result_dict[threshold] = to_remove_methods
-    # result = json.dumps(result_dict)
-    return to_remove_methods
-
 
 @app.post("/similar")
 async def similar(package_name: str, version_code: int, executed_methods: Annotated[dict, Body()], token=Depends(JWTBearer()),
